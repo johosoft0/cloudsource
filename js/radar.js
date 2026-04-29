@@ -1,26 +1,37 @@
 // ============================================================
 // CloudSource — radar.js
-// RainViewer radar overlay (free, no API key)
-// Uses a custom Leaflet pane so tiles aren't affected by
-// the dark-mode filter on .leaflet-tile-pane
+// Iowa State Mesonet NEXRAD radar overlay
+// Free, no API key, works at all zoom levels
+// Tile cache: mesonet.agron.iastate.edu/cache/tile.py
 // ============================================================
 
-import { RAINVIEWER_API_URL } from './config.js';
-
 let map = null;
-let frames = [];
-let tileLayers = [];
-let currentFrame = 0;
-let animInterval = null;
-let isVisible = false;
 let paneCreated = false;
+let isVisible = false;
+let animInterval = null;
+let currentFrame = 0;
+let tileLayers = [];
+
+// NEXRAD tile cache time steps (5-minute intervals, last 30 minutes)
+const FRAME_LAYERS = [
+  'nexrad-n0q-900913-m30m',
+  'nexrad-n0q-900913-m25m',
+  'nexrad-n0q-900913-m20m',
+  'nexrad-n0q-900913-m15m',
+  'nexrad-n0q-900913-m10m',
+  'nexrad-n0q-900913-m05m',
+  'nexrad-n0q-900913',         // current
+];
+
+function buildTileUrl(layerName) {
+  // Cache-bust with timestamp to avoid stale tiles
+  return `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/${layerName}/{z}/{x}/{y}.png?_=${Math.floor(Date.now() / 300000)}`;
+}
 
 export async function initRadar(leafletMap) {
   map = leafletMap;
 
-  // Create a dedicated pane for radar tiles.
-  // This pane sits above the base tiles but below markers,
-  // and crucially is NOT affected by the CSS filter on .leaflet-tile-pane.
+  // Custom pane so dark-mode filter on .leaflet-tile-pane doesn't affect radar
   if (!paneCreated) {
     map.createPane('radarPane');
     map.getPane('radarPane').style.zIndex = 250;
@@ -28,50 +39,20 @@ export async function initRadar(leafletMap) {
     paneCreated = true;
   }
 
-  await fetchFrames();
+  // Pre-create all frame layers
+  tileLayers = FRAME_LAYERS.map(name =>
+    L.tileLayer(buildTileUrl(name), {
+      pane: 'radarPane',
+      opacity: 0,
+      maxZoom: 19,
+      transparent: true,
+    })
+  );
 
+  // Wire toggle button
   const btn = document.getElementById('btn-radar');
   if (btn) {
     btn.addEventListener('click', toggleRadar);
-    // Show frame count as feedback
-    if (frames.length > 0) {
-      btn.title = `Radar (${frames.length} frames)`;
-    }
-  }
-}
-
-async function fetchFrames() {
-  try {
-    const res = await fetch(RAINVIEWER_API_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    frames = (data.radar?.past || []).slice(-6);
-
-    // Remove old tile layers
-    tileLayers.forEach(l => { try { map.removeLayer(l); } catch {} });
-
-    // RainViewer serves radar tiles up to about z12.
-    // maxNativeZoom tells Leaflet to never request above z12 from the server —
-    // at higher zoom levels it fetches z12 tiles and upscales them client-side.
-    // This prevents the "Zoom Level Not Supported" error tiles entirely.
-    tileLayers = frames.map(f =>
-      L.tileLayer(
-        `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
-        {
-          pane: 'radarPane',
-          opacity: 0,
-          zIndex: 250,
-          maxNativeZoom: 8,
-          maxZoom: 19,
-          errorTileUrl: '',
-        }
-      )
-    );
-  } catch (err) {
-    console.warn('Radar fetch failed:', err);
-    frames = [];
-    tileLayers = [];
   }
 }
 
@@ -84,13 +65,15 @@ export function toggleRadar() {
 function showRadar() {
   if (tileLayers.length === 0) return;
   isVisible = true;
-  currentFrame = tileLayers.length - 1;
+  currentFrame = tileLayers.length - 1; // start on current
 
+  // Add all layers, show only current frame
   tileLayers.forEach((layer, i) => {
     layer.addTo(map);
     layer.setOpacity(i === currentFrame ? 0.5 : 0);
   });
 
+  // Animate every 5 seconds
   animInterval = setInterval(advanceFrame, 5000);
 }
 
@@ -111,9 +94,24 @@ function advanceFrame() {
   tileLayers[currentFrame].setOpacity(0.5);
 }
 
+/**
+ * Refresh radar tiles (called periodically).
+ * Rebuilds tile URLs so the cache-bust param updates.
+ */
 export async function refreshRadar() {
   const wasVisible = isVisible;
   if (wasVisible) hideRadar();
-  await fetchFrames();
+
+  // Rebuild layers with fresh cache-bust
+  tileLayers.forEach(l => { try { map.removeLayer(l); } catch {} });
+  tileLayers = FRAME_LAYERS.map(name =>
+    L.tileLayer(buildTileUrl(name), {
+      pane: 'radarPane',
+      opacity: 0,
+      maxZoom: 19,
+      transparent: true,
+    })
+  );
+
   if (wasVisible) showRadar();
 }

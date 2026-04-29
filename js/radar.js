@@ -1,6 +1,8 @@
 // ============================================================
 // CloudSource — radar.js
 // RainViewer radar overlay (free, no API key)
+// Uses a custom Leaflet pane so tiles aren't affected by
+// the dark-mode filter on .leaflet-tile-pane
 // ============================================================
 
 import { RAINVIEWER_API_URL } from './config.js';
@@ -11,40 +13,54 @@ let tileLayers = [];
 let currentFrame = 0;
 let animInterval = null;
 let isVisible = false;
+let paneCreated = false;
 
-/**
- * Initialize radar module
- */
 export async function initRadar(leafletMap) {
   map = leafletMap;
+
+  // Create a dedicated pane for radar tiles.
+  // This pane sits above the base tiles but below markers,
+  // and crucially is NOT affected by the CSS filter on .leaflet-tile-pane.
+  if (!paneCreated) {
+    map.createPane('radarPane');
+    map.getPane('radarPane').style.zIndex = 250;
+    map.getPane('radarPane').style.pointerEvents = 'none';
+    paneCreated = true;
+  }
+
   await fetchFrames();
 
-  // Wire toggle button
   const btn = document.getElementById('btn-radar');
   if (btn) {
     btn.addEventListener('click', toggleRadar);
+    // Show frame count as feedback
+    if (frames.length > 0) {
+      btn.title = `Radar (${frames.length} frames)`;
+    }
   }
 }
 
-/**
- * Fetch available radar frames from RainViewer
- */
 async function fetchFrames() {
   try {
     const res = await fetch(RAINVIEWER_API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    // Use last 6 past frames for animation
     frames = (data.radar?.past || []).slice(-6);
 
-    // Pre-create tile layers (hidden)
-    tileLayers.forEach(l => map.removeLayer(l));
+    // Remove old tile layers
+    tileLayers.forEach(l => { try { map.removeLayer(l); } catch {} });
+
+    // Create new tile layers in the radar pane
     tileLayers = frames.map(f =>
-      L.tileLayer(`https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-        opacity: 0,
-        zIndex: 10,
-        attribution: '<a href="https://rainviewer.com">RainViewer</a>',
-      })
+      L.tileLayer(
+        `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
+        {
+          pane: 'radarPane',
+          opacity: 0,
+          zIndex: 250,
+        }
+      )
     );
   } catch (err) {
     console.warn('Radar fetch failed:', err);
@@ -53,16 +69,10 @@ async function fetchFrames() {
   }
 }
 
-/**
- * Toggle radar visibility
- */
 export function toggleRadar() {
-  if (isVisible) {
-    hideRadar();
-  } else {
-    showRadar();
-  }
-  updateToggleButton();
+  isVisible ? hideRadar() : showRadar();
+  const btn = document.getElementById('btn-radar');
+  if (btn) btn.classList.toggle('active', isVisible);
 }
 
 function showRadar() {
@@ -70,13 +80,11 @@ function showRadar() {
   isVisible = true;
   currentFrame = tileLayers.length - 1;
 
-  // Add all layers to map, show only current
   tileLayers.forEach((layer, i) => {
     layer.addTo(map);
-    layer.setOpacity(i === currentFrame ? 0.45 : 0);
+    layer.setOpacity(i === currentFrame ? 0.5 : 0);
   });
 
-  // Start animation: cycle every 5 seconds
   animInterval = setInterval(advanceFrame, 5000);
 }
 
@@ -86,33 +94,17 @@ function hideRadar() {
   animInterval = null;
   tileLayers.forEach(layer => {
     layer.setOpacity(0);
-    map.removeLayer(layer);
+    try { map.removeLayer(layer); } catch {}
   });
 }
 
 function advanceFrame() {
   if (tileLayers.length === 0) return;
-
-  // Fade out current
   tileLayers[currentFrame].setOpacity(0);
-
-  // Advance
   currentFrame = (currentFrame + 1) % tileLayers.length;
-
-  // Fade in next
-  tileLayers[currentFrame].setOpacity(0.45);
+  tileLayers[currentFrame].setOpacity(0.5);
 }
 
-function updateToggleButton() {
-  const btn = document.getElementById('btn-radar');
-  if (btn) {
-    btn.classList.toggle('active', isVisible);
-  }
-}
-
-/**
- * Refresh radar data (call periodically)
- */
 export async function refreshRadar() {
   const wasVisible = isVisible;
   if (wasVisible) hideRadar();

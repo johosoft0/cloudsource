@@ -1,179 +1,835 @@
-// ============================================================
-// CloudSource — app.js
-// Entry point: wires all modules together
-// ============================================================
+/* ============================================================
+   CloudSource — Design System
+   Aesthetic: Dark atmospheric, weather-station industrial
+   ============================================================ */
 
-import { DEFAULT_LAT, DEFAULT_LNG, DEFAULT_RADIUS } from './config.js';
-import { getNearbyReports, subscribeToReports } from './db.js';
-import { getCurrentPosition, watchPosition, getSavedRadius, saveRadius, showToast } from './utils.js';
-import { updateConditionsBar } from './weather.js';
-import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderReports, addReportMarker, refreshMarkerStyles } from './map.js';
-import { initReportForm, openReportModal } from './report.js';
-import { initTimeline, setTimelineReports, isTimelineLive } from './timeline.js';
-import { initDetail, openDetail } from './detail.js';
-import { initAuth, refreshProfile } from './auth.js';
+:root {
+  /* Core palette — deep navy to electric cyan */
+  --bg-base: #0b1120;
+  --bg-surface: #111827;
+  --bg-elevated: #1a2435;
+  --bg-glass: rgba(17, 24, 39, 0.88);
+  --border: rgba(148, 210, 242, 0.1);
+  --border-focus: rgba(56, 189, 248, 0.4);
 
-// ── App State ────────────────────────────────────────────
+  /* Text */
+  --text-primary: #e8edf5;
+  --text-secondary: #8899b0;
+  --text-muted: #546380;
 
-let userLat = DEFAULT_LAT;
-let userLng = DEFAULT_LNG;
-let currentRadius = getSavedRadius() || DEFAULT_RADIUS;
-let reports = [];
-let refreshInterval = null;
+  /* Accents */
+  --accent: #38bdf8;
+  --accent-glow: rgba(56, 189, 248, 0.25);
+  --accent-warm: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-success: #34d399;
 
-// ── Boot ─────────────────────────────────────────────────
+  /* Condition colors */
+  --c-clear: #fbbf24;
+  --c-cloudy: #94a3b8;
+  --c-partly: #a3c4e0;
+  --c-light-rain: #60a5fa;
+  --c-heavy-rain: #3b82f6;
+  --c-storm: #8b5cf6;
+  --c-snow: #e0e7ff;
+  --c-fog: #6b7280;
+  --c-wind: #14b8a6;
+  --c-other: #f472b6;
 
-async function boot() {
-  // 1. Init map
-  initMap();
+  /* Typography */
+  --font-display: 'Anybody', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
 
-  // 2. Init UI modules
-  initReportForm(onReportSubmitted);
-  initTimeline();
-  initDetail();
+  /* Spacing */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
 
-  // 3. Init auth (returns current user or null)
-  await initAuth(onUserChange);
-
-  // 4. Set marker tap handler
-  setMarkerTapHandler((report) => openDetail(report));
-
-  // 5. FAB handler
-  document.getElementById('fab-report').addEventListener('click', openReportModal);
-
-  // 6. Radius toggle
-  initRadiusToggle();
-
-  // 7. Get user location
-  try {
-    const pos = await getCurrentPosition();
-    userLat = pos.lat;
-    userLng = pos.lng;
-  } catch {
-    showToast('Using default location (Surfside Beach)');
-  }
-
-  // 8. Set map position + radius
-  setUserPosition(userLat, userLng);
-  setRadiusCircle(userLat, userLng, currentRadius);
-
-  // 9. Fetch baseline weather
-  updateConditionsBar(userLat, userLng);
-
-  // 10. Load initial reports
-  await loadReports();
-
-  // 11. Subscribe to realtime inserts
-  subscribeToReports(onRealtimeReport);
-
-  // 12. Watch position updates
-  watchPosition((pos) => {
-    userLat = pos.lat;
-    userLng = pos.lng;
-    setUserPosition(userLat, userLng);
-    setRadiusCircle(userLat, userLng, currentRadius);
-  });
-
-  // 13. Periodic refresh (marker decay + new data)
-  refreshInterval = setInterval(async () => {
-    // Refresh marker opacity/size
-    refreshMarkerStyles(reports);
-    // Re-fetch reports every 2 minutes
-  }, 60000);
-
-  // Full data refresh every 2 minutes
-  setInterval(async () => {
-    await loadReports();
-    updateConditionsBar(userLat, userLng);
-  }, 120000);
+  /* Z layers */
+  --z-map: 1;
+  --z-ui: 100;
+  --z-modal: 500;
+  --z-toast: 900;
 }
 
-// ── Data Loading ─────────────────────────────────────────
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-async function loadReports() {
-  try {
-    reports = await getNearbyReports(userLat, userLng, currentRadius);
-    setTimelineReports(reports);
-
-    if (isTimelineLive()) {
-      // Only show live reports (within 2hr TTL)
-      const live = reports.filter(r => {
-        const age = (Date.now() - new Date(r.created_at).getTime()) / 60000;
-        return age <= 120;
-      });
-      renderReports(live);
-    }
-  } catch (err) {
-    console.error('Failed to load reports:', err);
-  }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
-// ── Realtime Handler ─────────────────────────────────────
-
-function onRealtimeReport(newReport) {
-  // Add to local array (without full join data, but enough for marker)
-  const enriched = {
-    ...newReport,
-    display_name: 'Weather Watcher',
-    reputation: newReport.trust_score || 25,
-    level: 1,
-    confirm_count: 0,
-    deny_count: 0,
-    distance_miles: null,
-  };
-
-  reports.unshift(enriched);
-  setTimelineReports(reports);
-
-  if (isTimelineLive()) {
-    addReportMarker(enriched);
-  }
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
 }
 
-// ── Report Submitted ─────────────────────────────────────
-
-async function onReportSubmitted(report) {
-  // Reload to get full joined data
-  await loadReports();
-  // Refresh profile (stats updated by trigger)
-  refreshProfile();
+input, textarea {
+  font-family: var(--font-body);
+  color: var(--text-primary);
 }
 
-// ── User Change ──────────────────────────────────────────
-
-function onUserChange(user) {
-  // Could reload reports or update UI based on auth state
+/* ── Map ── */
+#map {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-map);
 }
 
-// ── Radius Toggle ────────────────────────────────────────
-
-function initRadiusToggle() {
-  const buttons = document.querySelectorAll('.radius-btn');
-
-  // Set initial active state from saved preference
-  buttons.forEach(btn => {
-    const miles = parseFloat(btn.dataset.miles);
-    btn.classList.toggle('active', miles === currentRadius);
-
-    btn.addEventListener('click', () => {
-      currentRadius = miles;
-      saveRadius(miles);
-
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      setRadiusCircle(userLat, userLng, currentRadius);
-      loadReports();
-    });
-  });
+/* Override Leaflet tiles for dark theme */
+.leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.3) hue-rotate(180deg) invert(1); }
+.leaflet-control-attribution { display: none; }
+.leaflet-control-zoom {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
 }
 
-// ── Register Service Worker ──────────────────────────────
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+/* ── Top Bar ── */
+#top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-ui);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top, 12px));
+  background: linear-gradient(to bottom, var(--bg-base), transparent);
+  pointer-events: none;
 }
 
-// ── Go ───────────────────────────────────────────────────
+#top-bar > * { pointer-events: auto; }
 
-boot();
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  font-size: 24px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+#conditions-temp {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── Radius Toggle ── */
+#radius-toggle {
+  position: fixed;
+  top: max(60px, calc(env(safe-area-inset-top, 12px) + 52px));
+  left: 16px;
+  z-index: var(--z-ui);
+  display: flex;
+  gap: 2px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 3px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.radius-btn {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.radius-btn.active {
+  background: var(--accent);
+  color: var(--bg-base);
+  font-weight: 600;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ── FAB ── */
+#fab-report {
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
+  z-index: var(--z-ui);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px var(--accent-glow), 0 0 40px rgba(56, 189, 248, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#fab-report:active {
+  transform: scale(0.92);
+}
+
+/* ── Profile Button ── */
+#btn-profile {
+  position: fixed;
+  bottom: 100px;
+  left: 16px;
+  z-index: var(--z-ui);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+#btn-profile:active {
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+
+/* ── Timeline Panel ── */
+#timeline-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-ui);
+  padding: 12px 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  background: linear-gradient(to top, var(--bg-base) 60%, transparent);
+}
+
+#timeline-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-align: center;
+  min-height: 16px;
+}
+
+#timeline-track {
+  position: relative;
+}
+
+#timeline-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-elevated);
+  outline: none;
+  direction: rtl; /* 0 = now (right), 120 = 2h ago (left) */
+}
+
+#timeline-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  cursor: grab;
+}
+
+#timeline-scrub::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  cursor: grab;
+  border: none;
+}
+
+#timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Modals ── */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: opacity 0.25s ease;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  border: 1px solid var(--border);
+  border-bottom: none;
+  animation: slideUp 0.3s ease;
+}
+
+.modal-sheet-sm {
+  max-height: 70vh;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  margin: 0 auto 16px;
+}
+
+.modal-sheet h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+/* ── Report Form ── */
+#photo-section {
+  margin-bottom: 16px;
+}
+
+#btn-camera {
+  width: 100%;
+  padding: 24px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+#btn-camera:active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#photo-preview {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.char-count {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+#condition-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.condition-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.condition-btn .cond-icon {
+  font-size: 20px;
+}
+
+.condition-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--text-primary);
+}
+
+#intensity-bar {
+  margin-bottom: 4px;
+}
+
+#intensity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--accent), var(--accent-warm), var(--accent-danger));
+  outline: none;
+}
+
+#intensity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  cursor: grab;
+}
+
+#intensity-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  cursor: grab;
+  border: none;
+}
+
+#intensity-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+#report-note {
+  width: 100%;
+  height: 60px;
+  resize: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+#report-note:focus {
+  border-color: var(--border-focus);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-primary {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* ── Report Detail ── */
+#detail-photo {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+#detail-condition {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+#detail-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+#detail-note {
+  font-size: 14px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+#detail-note:empty { display: none; }
+
+#detail-user {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.user-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.badge-trusted { background: rgba(52, 211, 153, 0.15); color: var(--accent-success); }
+.badge-expert { background: rgba(245, 158, 11, 0.15); color: var(--accent-warm); }
+
+#detail-votes {
+  display: flex;
+  gap: 8px;
+}
+
+.vote-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.vote-btn:active {
+  background: var(--bg-elevated);
+}
+
+.vote-btn.voted-confirm {
+  border-color: var(--accent-success);
+  color: var(--accent-success);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.vote-btn.voted-deny {
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.vote-count {
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+/* ── Auth / Profile ── */
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+#auth-email {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 12px;
+}
+
+#auth-email:focus { border-color: var(--border-focus); }
+
+.auth-status {
+  font-size: 13px;
+  text-align: center;
+  margin-top: 12px;
+  min-height: 20px;
+}
+
+.auth-status.success { color: var(--accent-success); }
+.auth-status.error { color: var(--accent-danger); }
+
+#profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+#profile-level-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  color: white;
+  flex-shrink: 0;
+}
+
+#profile-info h2 {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+#profile-rep {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+#profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+#profile-achievements h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.achievement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.achievement:last-child { border-bottom: none; }
+
+.achievement-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.achievement-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.achievement-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.achievement.locked {
+  opacity: 0.35;
+}
+
+/* ── Toast ── */
+#toast-container {
+  position: fixed;
+  top: max(70px, calc(env(safe-area-inset-top, 12px) + 60px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.toast.success { border-color: var(--accent-success); }
+.toast.error { border-color: var(--accent-danger); }
+
+@keyframes toastIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ── Map markers (custom) ── */
+.report-marker {
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.report-marker:hover {
+  transform: scale(1.2);
+}
+
+/* ── Loading state ── */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

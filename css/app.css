@@ -315,6 +315,13 @@ input, textarea {
   transition: opacity 0.25s ease;
 }
 
+#auth-view.hidden,
+#profile-view.hidden,
+#photo-preview.hidden,
+#detail-photo.hidden {
+  display: none;
+}
+
 .modal.hidden {
   display: none;
 }

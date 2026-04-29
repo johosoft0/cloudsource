@@ -48,6 +48,25 @@ export function milesToMeters(miles) {
   return miles * 1609.344;
 }
 
+/**
+ * Fuzz a lat/lng by ~100 meters in a random direction.
+ * Prevents exact user location from being broadcast.
+ */
+export function fuzzLocation(lat, lng) {
+  // ~100m in degrees (varies by latitude but close enough)
+  const metersOffset = 100;
+  const latOffset = metersOffset / 111320; // 1 deg lat ≈ 111,320m
+  const lngOffset = metersOffset / (111320 * Math.cos(lat * Math.PI / 180));
+
+  const angle = Math.random() * 2 * Math.PI;
+  const r = Math.sqrt(Math.random()); // uniform distribution within circle
+
+  return {
+    lat: lat + r * latOffset * Math.sin(angle),
+    lng: lng + r * lngOffset * Math.cos(angle),
+  };
+}
+
 // ── Time Formatting ──────────────────────────────────────
 
 export function timeAgo(dateString) {
@@ -224,4 +243,4 @@ export function getSavedRadius() {
 
 export function saveRadius(miles) {
   localStorage.setItem('cs_radius', miles);
-}
+      }

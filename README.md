@@ -1,64 +1,144 @@
-# CloudSource
+// ============================================================
+// CloudSource — detail.js
+// Report detail popup: photo, info, voting, photo flagging
+// ============================================================
 
-Hyper-local, crowd-sourced weather intelligence. See what's actually happening on your street through geolocated photo reports, not generalized forecasts miles away.
+import { CONDITIONS } from './config.js';
+import { submitVote, getUserVote, getPhotoUrl, reportPhoto } from './db.js';
+import { timeAgo, showToast } from './utils.js';
 
-## Features
+let currentReport = null;
 
-- **Live Map** — Real-time report markers with opacity decay and trust-weighted sizing
-- **Photo Reports** — Snap a photo, tag the condition, submit in under 15 seconds
-- **Time Scrub** — Scrub back through the last 2 hours of reports
-- **Voting** — Confirm or deny reports to build community trust
-- **Reputation System** — Build your score through accurate, consistent contributions
-- **Achievements** — Earn recognition for milestones and unique conditions documented
-- **Baseline Weather** — Open-Meteo current conditions overlay (no API key needed)
-- **PWA** — Installable on any device, offline app shell
+const condMap = {};
+CONDITIONS.forEach(c => { condMap[c.key] = c; });
 
-## Tech Stack
+export function initDetail() {
+  document.getElementById('btn-confirm').addEventListener('click', () => handleVote('confirm'));
+  document.getElementById('btn-deny').addEventListener('click', () => handleVote('deny'));
+  document.getElementById('btn-close-detail').addEventListener('click', closeDetail);
+  document.querySelector('#report-detail .modal-backdrop').addEventListener('click', closeDetail);
+  document.getElementById('btn-flag-photo').addEventListener('click', handleFlagPhoto);
+}
 
-- **Frontend**: Vanilla JS (ES Modules), Leaflet.js + OpenStreetMap
-- **Backend**: Supabase (Postgres + PostGIS, Auth, Storage, Realtime)
-- **Weather**: Open-Meteo (zero API keys)
-- **Hosting**: GitHub Pages (static files, no build step)
+export async function openDetail(report) {
+  currentReport = report;
+  const modal = document.getElementById('report-detail');
 
-## Setup
+  // Photo
+  const photoEl = document.getElementById('detail-photo');
+  const flagBtn = document.getElementById('btn-flag-photo');
 
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Run the migration SQL in the Supabase SQL Editor
-3. Update `js/config.js` with your Supabase URL and anon key
-4. Deploy to GitHub Pages or any static host
+  if (report.photo_path) {
+    photoEl.src = getPhotoUrl(report.photo_path);
+    photoEl.classList.remove('hidden');
+    flagBtn.classList.remove('hidden');
+  } else {
+    photoEl.classList.add('hidden');
+    photoEl.src = '';
+    flagBtn.classList.add('hidden');
+  }
 
-## Project Structure
+  // Condition
+  const cond = condMap[report.condition] || { icon: '🌀', label: 'Other' };
+  document.getElementById('detail-condition').textContent = `${cond.icon} ${cond.label} · Intensity ${report.intensity}/5`;
 
-```
-cloudsource/
-├── index.html          ← Single-page app entry
-├── manifest.json       ← PWA manifest
-├── sw.js               ← Service worker (offline shell)
-├── css/
-│   └── app.css         ← Full design system
-├── js/
-│   ├── app.js          ← Entry point, module orchestration
-│   ├── config.js       ← Supabase creds, constants, conditions
-│   ├── db.js           ← Supabase client (auth, queries, storage, realtime)
-│   ├── utils.js        ← Geo, time, image resize, toasts
-│   ├── weather.js      ← Open-Meteo baseline conditions
-│   ├── map.js          ← Leaflet map, markers, radius circle
-│   ├── report.js       ← Report submission flow
-│   ├── timeline.js     ← Time scrub + filtering
-│   ├── detail.js       ← Report detail popup + voting
-│   └── auth.js         ← Auth UI, profile, achievements
-└── assets/
-    └── icons/          ← PWA icons
-```
+  // Meta
+  document.getElementById('detail-meta').textContent =
+    `${timeAgo(report.created_at)} · ${report.distance_miles?.toFixed(1) || '?'} mi away`;
 
-## Zero API Keys
+  // Note
+  document.getElementById('detail-note').textContent = report.note || '';
 
-The entire stack runs with zero API keys in the client:
-- **Supabase anon key** is safe to expose (RLS controls access)
-- **Open-Meteo** requires no key or signup
-- **OpenStreetMap tiles** are free with attribution
-- **GitHub Pages** is free static hosting
+  // User info
+  const rep = report.reputation || 25;
+  let badge = '';
+  if (rep >= 75) badge = '<span class="user-badge badge-expert">Expert</span>';
+  else if (rep >= 50) badge = '<span class="user-badge badge-trusted">Trusted</span>';
+  document.getElementById('detail-user').innerHTML =
+    `${report.display_name || 'Weather Watcher'} · Lv ${report.level || 1} ${badge}`;
 
-## License
+  // Vote counts
+  document.getElementById('confirm-count').textContent = report.confirm_count || 0;
+  document.getElementById('deny-count').textContent = report.deny_count || 0;
 
-MIT
+  // Reset vote buttons
+  document.getElementById('btn-confirm').className = 'vote-btn';
+  document.getElementById('btn-deny').className = 'vote-btn';
+
+  // Check existing vote
+  if (window._csUser) {
+    try {
+      const existing = await getUserVote(report.id, window._csUser.id);
+      if (existing === 'confirm') document.getElementById('btn-confirm').classList.add('voted-confirm');
+      else if (existing === 'deny') document.getElementById('btn-deny').classList.add('voted-deny');
+    } catch { /* ignore */ }
+  }
+
+  modal.classList.remove('hidden');
+}
+
+async function handleVote(voteType) {
+  if (!window._csUser) {
+    showToast('Sign in to vote', 'error');
+    return;
+  }
+  if (!currentReport) return;
+
+  try {
+    await submitVote(currentReport.id, window._csUser.id, voteType);
+
+    const confirmBtn = document.getElementById('btn-confirm');
+    const denyBtn = document.getElementById('btn-deny');
+    confirmBtn.className = 'vote-btn';
+    denyBtn.className = 'vote-btn';
+
+    if (voteType === 'confirm') {
+      confirmBtn.classList.add('voted-confirm');
+      document.getElementById('confirm-count').textContent =
+        (parseInt(document.getElementById('confirm-count').textContent) || 0) + 1;
+    } else {
+      denyBtn.classList.add('voted-deny');
+      document.getElementById('deny-count').textContent =
+        (parseInt(document.getElementById('deny-count').textContent) || 0) + 1;
+    }
+
+    showToast(`Vote recorded: ${voteType}`, 'success');
+  } catch {
+    showToast('Failed to vote', 'error');
+  }
+}
+
+async function handleFlagPhoto() {
+  if (!window._csUser) {
+    showToast('Sign in to report photos', 'error');
+    return;
+  }
+  if (!currentReport) return;
+
+  // Confirm before flagging
+  if (!confirm('Report this photo as inappropriate? It will be hidden immediately.')) return;
+
+  const btn = document.getElementById('btn-flag-photo');
+  btn.disabled = true;
+
+  try {
+    await reportPhoto(currentReport.id, window._csUser.id, 'flagged by user');
+    showToast('Photo reported and hidden', 'success');
+
+    // Hide photo in current view
+    document.getElementById('detail-photo').classList.add('hidden');
+    btn.classList.add('hidden');
+  } catch (err) {
+    const msg = err.message?.includes('duplicate') || err.message?.includes('unique')
+      ? 'You already reported this photo'
+      : 'Failed to report photo';
+    showToast(msg, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+export function closeDetail() {
+  document.getElementById('report-detail').classList.add('hidden');
+  currentReport = null;
+}

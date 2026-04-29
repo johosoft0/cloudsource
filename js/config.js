@@ -5,38 +5,54 @@
 export const SUPABASE_URL = 'https://akhqfhihgakjlgsajppx.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFraHFmaGloZ2Framxnc2FqcHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTE5MjksImV4cCI6MjA5Mjk4NzkyOX0.eu_EXab5Z7zsRpjJvcMJMUDTyLjPdCtJFDgtIbzB50A';
 
-// Map defaults (used only for initial center before geolocation resolves)
 export const INITIAL_ZOOM = 13;
-
-// Radius options in miles
 export const RADIUS_OPTIONS = [0.5, 5, 10];
 export const DEFAULT_RADIUS = 5;
-
-// Report lifecycle
 export const REPORT_TTL_MINUTES = 120;
 export const REPORT_ARCHIVE_HOURS = 24;
-
-// Photo constraints
 export const MAX_PHOTO_WIDTH = 1200;
 export const MAX_PHOTO_QUALITY = 0.8;
-export const PHOTO_GPS_MAX_DISTANCE_MI = 1.0; // max distance between photo GPS and device GPS
+export const PHOTO_GPS_MAX_DISTANCE_MI = 1.0;
 
-// Weather APIs (no keys needed)
 export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 export const NWS_API_URL = 'https://api.weather.gov';
 export const NWS_USER_AGENT = 'CloudSource/1.0 (cloudsource-app)';
 export const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-maps.json';
 
-// XP system
+// XP constants (mirrored from SQL triggers)
 export const XP_REPORT_BASE = 10;
 export const XP_PHOTO_BONUS = 10;
 export const XP_NOTE_BONUS = 5;
-export const XP_INTENSITY_BONUS = 5; // awarded when intensity is not default (3)
+export const XP_INTENSITY_BONUS = 5;
 export const XP_VOTE = 3;
 
-// Level thresholds (XP needed per level)
-export const REPORTER_LEVEL_DIVISOR = 100;  // reporter level = floor(xp_report / 100) + 1
-export const COMMUNITY_LEVEL_DIVISOR = 50;  // community level = floor(xp_community / 50) + 1
+// Reporter levels — 100 XP per level, 10 levels
+export const REPORTER_LEVELS = [
+  { level: 1,  xp: 0,    title: 'Drizzle Spotter',   badge: '🌱' },
+  { level: 2,  xp: 100,  title: 'Cloud Watcher',     badge: '☁️' },
+  { level: 3,  xp: 200,  title: 'Rain Reader',       badge: '🌦️' },
+  { level: 4,  xp: 300,  title: 'Weather Scout',     badge: '🔭' },
+  { level: 5,  xp: 400,  title: 'Storm Tracker',     badge: '⛈️' },
+  { level: 6,  xp: 500,  title: 'Forecast Runner',   badge: '🏃' },
+  { level: 7,  xp: 600,  title: 'Tempest Sage',      badge: '🌪️' },
+  { level: 8,  xp: 700,  title: 'Cyclone Hunter',    badge: '🎯' },
+  { level: 9,  xp: 800,  title: 'Weather Oracle',    badge: '🔮' },
+  { level: 10, xp: 900,  title: 'Atmosphere Master', badge: '👑' },
+];
+
+// Community levels — 50 XP per level, 10 levels
+export const COMMUNITY_LEVELS = [
+  { level: 1,  xp: 0,    title: 'Observer',    badge: '👁️' },
+  { level: 2,  xp: 50,   title: 'Responder',   badge: '💬' },
+  { level: 3,  xp: 100,  title: 'Verifier',    badge: '✅' },
+  { level: 4,  xp: 150,  title: 'Validator',    badge: '🛡️' },
+  { level: 5,  xp: 200,  title: 'Guardian',     badge: '⚔️' },
+  { level: 6,  xp: 250,  title: 'Sentinel',     badge: '🗼' },
+  { level: 7,  xp: 300,  title: 'Watchkeeper',  badge: '🔔' },
+  { level: 8,  xp: 400,  title: 'Warden',       badge: '🏛️' },
+  { level: 9,  xp: 500,  title: 'Overseer',     badge: '🦅' },
+  { level: 10, xp: 650,  title: 'Steward',      badge: '🌟' },
+];
 
 // Condition definitions
 export const CONDITIONS = [

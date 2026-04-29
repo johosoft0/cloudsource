@@ -315,11 +315,8 @@ input, textarea {
   transition: opacity 0.25s ease;
 }
 
-#auth-view.hidden,
-#profile-view.hidden,
-#photo-preview.hidden,
-#detail-photo.hidden {
-  display: none;
+.hidden {
+  display: none !important;
 }
 
 .modal.hidden {
@@ -835,4 +832,175 @@ input, textarea {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── Geolocation Overlay ── */
+.geo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease;
+}
+
+.geo-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.geo-content {
+  text-align: center;
+  padding: 32px;
+  max-width: 340px;
+}
+
+.geo-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.geo-content h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.geo-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Radar Toggle ── */
+.radar-btn {
+  position: fixed;
+  top: max(60px, calc(env(safe-area-inset-top, 12px) + 52px));
+  right: 16px;
+  z-index: var(--z-ui);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.radar-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Profile Edit ── */
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.edit-btn:active {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.name-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.name-edit-row input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  outline: none;
+}
+
+.name-edit-row input:focus {
+  border-color: var(--border-focus);
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Stats XP sub-label ── */
+.stat-xp {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+#profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Photo Flag Button ── */
+.detail-photo-wrap {
+  position: relative;
+}
+
+.flag-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--text-secondary);
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.flag-btn:active {
+  background: rgba(239, 68, 68, 0.3);
+  color: var(--accent-danger);
+}
+
+/* ── Photo GPS Indicator ── */
+.photo-gps {
+  font-size: 11px;
+  color: var(--accent-success);
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(52, 211, 153, 0.08);
+  border-radius: var(--radius-sm);
 }

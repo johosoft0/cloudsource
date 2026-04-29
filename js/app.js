@@ -1,72 +1,98 @@
 // ============================================================
 // CloudSource — app.js
-// Entry point: wires all modules together
+// Entry point: geolocation gate, module init, data loop
 // ============================================================
 
-import { DEFAULT_LAT, DEFAULT_LNG, DEFAULT_RADIUS } from './config.js';
+import { DEFAULT_RADIUS } from './config.js';
 import { getNearbyReports, subscribeToReports } from './db.js';
 import { getCurrentPosition, watchPosition, getSavedRadius, saveRadius, showToast } from './utils.js';
 import { updateConditionsBar } from './weather.js';
-import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderReports, addReportMarker, refreshMarkerStyles } from './map.js';
+import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderReports, addReportMarker, refreshMarkerStyles, getMap } from './map.js';
 import { initReportForm, openReportModal } from './report.js';
 import { initTimeline, setTimelineReports, isTimelineLive } from './timeline.js';
 import { initDetail, openDetail } from './detail.js';
 import { initAuth, refreshProfile } from './auth.js';
+import { initRadar, refreshRadar } from './radar.js';
 
 // ── App State ────────────────────────────────────────────
 
-let userLat = DEFAULT_LAT;
-let userLng = DEFAULT_LNG;
+let userLat = null;
+let userLng = null;
 let currentRadius = getSavedRadius() || DEFAULT_RADIUS;
 let reports = [];
-let refreshInterval = null;
 
 // ── Boot ─────────────────────────────────────────────────
 
 async function boot() {
-  // 1. Init map
-  initMap();
+  // 1. Geolocation is REQUIRED — gate everything on it
+  const geoOverlay = document.getElementById('geo-overlay');
+  const geoRetry = document.getElementById('geo-retry');
+  const geoStatus = document.getElementById('geo-status');
 
-  // 2. Init UI modules
+  if (geoRetry) {
+    geoRetry.addEventListener('click', () => requestLocation());
+  }
+
+  async function requestLocation() {
+    geoStatus.textContent = 'Requesting location...';
+    geoRetry.classList.add('hidden');
+
+    try {
+      const pos = await getCurrentPosition(false); // coarse is fine
+      userLat = pos.lat;
+      userLng = pos.lng;
+      geoOverlay.classList.add('hidden');
+      startApp();
+    } catch (err) {
+      if (err.code === 1) {
+        // Permission denied
+        geoStatus.textContent = 'Location access was denied. CloudSource needs your location to show nearby weather reports.';
+      } else if (err.code === 2) {
+        geoStatus.textContent = 'Location unavailable. Make sure location services are enabled.';
+      } else {
+        geoStatus.textContent = 'Location request timed out. Please try again.';
+      }
+      geoRetry.classList.remove('hidden');
+    }
+  }
+
+  await requestLocation();
+}
+
+async function startApp() {
+  // 2. Init map at user's actual location
+  const leafletMap = initMap(userLat, userLng);
+
+  // 3. Init UI modules
   initReportForm(onReportSubmitted);
   initTimeline();
   initDetail();
 
-  // 3. Init auth (returns current user or null)
-  await initAuth(onUserChange);
+  // 4. Init auth
+  await initAuth();
 
-  // 4. Set marker tap handler
+  // 5. Event handlers
   setMarkerTapHandler((report) => openDetail(report));
-
-  // 5. FAB handler
   document.getElementById('fab-report').addEventListener('click', openReportModal);
-
-  // 6. Radius toggle
   initRadiusToggle();
 
-  // 7. Get user location
-  try {
-    const pos = await getCurrentPosition();
-    userLat = pos.lat;
-    userLng = pos.lng;
-  } catch {
-    showToast('Using default location (Surfside Beach)');
-  }
-
-  // 8. Set map position + radius
+  // 6. Set map position + radius
   setUserPosition(userLat, userLng);
   setRadiusCircle(userLat, userLng, currentRadius);
 
-  // 9. Fetch baseline weather
+  // 7. Baseline weather
   updateConditionsBar(userLat, userLng);
 
-  // 10. Load initial reports
+  // 8. Load reports
   await loadReports();
 
-  // 11. Subscribe to realtime inserts
+  // 9. Realtime
   subscribeToReports(onRealtimeReport);
 
-  // 12. Watch position updates
+  // 10. Radar overlay
+  await initRadar(leafletMap);
+
+  // 11. Watch position
   watchPosition((pos) => {
     userLat = pos.lat;
     userLng = pos.lng;
@@ -74,18 +100,16 @@ async function boot() {
     setRadiusCircle(userLat, userLng, currentRadius);
   });
 
-  // 13. Periodic refresh (marker decay + new data)
-  refreshInterval = setInterval(async () => {
-    // Refresh marker opacity/size
-    refreshMarkerStyles(reports);
-    // Re-fetch reports every 2 minutes
-  }, 60000);
+  // 12. Periodic refresh
+  setInterval(() => refreshMarkerStyles(reports), 60000);
 
-  // Full data refresh every 2 minutes
   setInterval(async () => {
     await loadReports();
     updateConditionsBar(userLat, userLng);
   }, 120000);
+
+  // Refresh radar every 5 minutes
+  setInterval(() => refreshRadar(), 300000);
 }
 
 // ── Data Loading ─────────────────────────────────────────
@@ -94,9 +118,7 @@ async function loadReports() {
   try {
     reports = await getNearbyReports(userLat, userLng, currentRadius);
     setTimelineReports(reports);
-
     if (isTimelineLive()) {
-      // Only show live reports (within 2hr TTL)
       const live = reports.filter(r => {
         const age = (Date.now() - new Date(r.created_at).getTime()) / 60000;
         return age <= 120;
@@ -111,7 +133,6 @@ async function loadReports() {
 // ── Realtime Handler ─────────────────────────────────────
 
 function onRealtimeReport(newReport) {
-  // Add to local array (without full join data, but enough for marker)
   const enriched = {
     ...newReport,
     display_name: 'Weather Watcher',
@@ -121,54 +142,37 @@ function onRealtimeReport(newReport) {
     deny_count: 0,
     distance_miles: null,
   };
-
   reports.unshift(enriched);
   setTimelineReports(reports);
-
-  if (isTimelineLive()) {
-    addReportMarker(enriched);
-  }
+  if (isTimelineLive()) addReportMarker(enriched);
 }
 
 // ── Report Submitted ─────────────────────────────────────
 
-async function onReportSubmitted(report) {
-  // Reload to get full joined data
+async function onReportSubmitted() {
   await loadReports();
-  // Refresh profile (stats updated by trigger)
   refreshProfile();
-}
-
-// ── User Change ──────────────────────────────────────────
-
-function onUserChange(user) {
-  // Could reload reports or update UI based on auth state
 }
 
 // ── Radius Toggle ────────────────────────────────────────
 
 function initRadiusToggle() {
   const buttons = document.querySelectorAll('.radius-btn');
-
-  // Set initial active state from saved preference
   buttons.forEach(btn => {
     const miles = parseFloat(btn.dataset.miles);
     btn.classList.toggle('active', miles === currentRadius);
-
     btn.addEventListener('click', () => {
       currentRadius = miles;
       saveRadius(miles);
-
       buttons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-
       setRadiusCircle(userLat, userLng, currentRadius);
       loadReports();
     });
   });
 }
 
-// ── Register Service Worker ──────────────────────────────
+// ── Service Worker ───────────────────────────────────────
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

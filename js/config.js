@@ -1,34 +1,42 @@
 // ============================================================
 // CloudSource — config.js
-// App-wide constants and configuration
 // ============================================================
 
 export const SUPABASE_URL = 'https://akhqfhihgakjlgsajppx.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFraHFmaGloZ2Framxnc2FqcHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTE5MjksImV4cCI6MjA5Mjk4NzkyOX0.eu_EXab5Z7zsRpjJvcMJMUDTyLjPdCtJFDgtIbzB50A';
 
-// Default location (Surfside Beach, SC)
-export const DEFAULT_LAT = 33.6051;
-export const DEFAULT_LNG = -78.9731;
-export const DEFAULT_ZOOM = 13;
+// Map defaults (used only for initial center before geolocation resolves)
+export const INITIAL_ZOOM = 13;
 
 // Radius options in miles
 export const RADIUS_OPTIONS = [0.5, 5, 10];
 export const DEFAULT_RADIUS = 5;
 
 // Report lifecycle
-export const REPORT_TTL_MINUTES = 120; // 2 hours on live map
-export const REPORT_ARCHIVE_HOURS = 24; // kept in timeline scrub
+export const REPORT_TTL_MINUTES = 120;
+export const REPORT_ARCHIVE_HOURS = 24;
 
 // Photo constraints
 export const MAX_PHOTO_WIDTH = 1200;
 export const MAX_PHOTO_QUALITY = 0.8;
+export const PHOTO_GPS_MAX_DISTANCE_MI = 1.0; // max distance between photo GPS and device GPS
 
-// Open-Meteo (no key needed)
+// Weather APIs (no keys needed)
 export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
-
-// NWS API (no key needed, just User-Agent)
 export const NWS_API_URL = 'https://api.weather.gov';
 export const NWS_USER_AGENT = 'CloudSource/1.0 (cloudsource-app)';
+export const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-maps.json';
+
+// XP system
+export const XP_REPORT_BASE = 10;
+export const XP_PHOTO_BONUS = 10;
+export const XP_NOTE_BONUS = 5;
+export const XP_INTENSITY_BONUS = 5; // awarded when intensity is not default (3)
+export const XP_VOTE = 3;
+
+// Level thresholds (XP needed per level)
+export const REPORTER_LEVEL_DIVISOR = 100;  // reporter level = floor(xp_report / 100) + 1
+export const COMMUNITY_LEVEL_DIVISOR = 50;  // community level = floor(xp_community / 50) + 1
 
 // Condition definitions
 export const CONDITIONS = [

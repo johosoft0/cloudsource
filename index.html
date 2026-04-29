@@ -14,11 +14,9 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Anybody:wght@600;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="css/app.css">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -34,6 +32,14 @@
       <h2>Location Required</h2>
       <p id="geo-status">CloudSource needs your location to show nearby weather reports.</p>
       <button id="geo-retry" class="btn-primary hidden" style="margin-top:12px;">Try Again</button>
+      <!-- TODO: REMOVE BEFORE PRODUCTION — zip code fallback for testing only -->
+      <div id="geo-zip-fallback" class="geo-zip hidden">
+        <p class="geo-zip-label">Or enter a zip code for testing:</p>
+        <div class="geo-zip-row">
+          <input id="geo-zip-input" type="text" maxlength="5" placeholder="29575" inputmode="numeric" pattern="[0-9]*">
+          <button id="geo-zip-go" class="btn-primary btn-sm">Go</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -49,7 +55,6 @@
     </div>
   </header>
 
-  <!-- Map -->
   <div id="map"></div>
 
   <!-- Radius toggle -->
@@ -68,7 +73,7 @@
     <span>Radar</span>
   </button>
 
-  <!-- Submit report FAB -->
+  <!-- FAB -->
   <button id="fab-report" aria-label="Submit weather report">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -87,13 +92,13 @@
     <div id="timeline-summary">Now — live reports</div>
     <div id="timeline-track">
       <input type="range" id="timeline-scrub" min="0" max="120" value="0" step="1">
-      <div id="timeline-labels">
-        <span>Now</span><span>1h ago</span><span>2h ago</span>
-      </div>
+      <div id="timeline-labels"><span>Now</span><span>1h ago</span><span>2h ago</span></div>
     </div>
   </div>
 
-  <!-- Report Submission Modal -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Report Submission Modal                            -->
+  <!-- ═══════════════════════════════════════════════════ -->
   <div id="report-modal" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet">
@@ -119,9 +124,7 @@
       <label class="field-label">Intensity</label>
       <div id="intensity-bar">
         <input type="range" id="intensity-slider" min="1" max="5" value="3">
-        <div id="intensity-labels">
-          <span>Mild</span><span>Moderate</span><span>Severe</span>
-        </div>
+        <div id="intensity-labels"><span>Mild</span><span>Moderate</span><span>Severe</span></div>
       </div>
 
       <label class="field-label">Note <span class="char-count">0/140</span></label>
@@ -134,7 +137,9 @@
     </div>
   </div>
 
-  <!-- Report Detail Modal -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Report Detail Modal                                -->
+  <!-- ═══════════════════════════════════════════════════ -->
   <div id="report-detail" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet modal-sheet-sm">
@@ -168,11 +173,14 @@
     </div>
   </div>
 
-  <!-- Profile / Auth Modal -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Profile / Auth Modal                               -->
+  <!-- ═══════════════════════════════════════════════════ -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet">
       <div class="modal-handle"></div>
+
       <!-- Auth view (logged out) -->
       <div id="auth-view">
         <h2>Join CloudSource</h2>
@@ -181,8 +189,11 @@
         <button id="btn-send-magic" class="btn-primary" style="width:100%">Send Magic Link</button>
         <p id="auth-status" class="auth-status"></p>
       </div>
+
       <!-- Profile view (logged in) -->
       <div id="profile-view" class="hidden">
+
+        <!-- Header -->
         <div id="profile-header">
           <div id="profile-level-badge"></div>
           <div id="profile-info">
@@ -197,24 +208,46 @@
             <p id="profile-rep"></p>
           </div>
         </div>
-        <!-- Inline name edit -->
+
+        <!-- Inline name edit (hidden by default) -->
         <div id="name-edit-row" class="name-edit-row hidden">
           <input id="edit-name-input" type="text" maxlength="20" placeholder="New display name">
           <button id="btn-save-name" class="btn-primary btn-sm">Save</button>
           <button id="btn-cancel-edit" class="btn-secondary btn-sm">Cancel</button>
         </div>
-        <div id="profile-stats"></div>
-        <div id="profile-achievements"></div>
+
+        <!-- Tabs -->
+        <div class="profile-tabs">
+          <button class="tab-btn active" data-tab="general">Profile</button>
+          <button class="tab-btn" data-tab="reporter">Reporter</button>
+          <button class="tab-btn" data-tab="community">Community</button>
+        </div>
+
+        <!-- Tab: General -->
+        <div id="tab-general" class="tab-content">
+          <div id="profile-stats"></div>
+          <div id="profile-achievements"></div>
+        </div>
+
+        <!-- Tab: Reporter -->
+        <div id="tab-reporter" class="tab-content hidden">
+          <div id="reporter-content"></div>
+        </div>
+
+        <!-- Tab: Community -->
+        <div id="tab-community" class="tab-content hidden">
+          <div id="community-content"></div>
+        </div>
+
         <button id="btn-signout" class="btn-secondary" style="width:100%;margin-top:16px;">Sign Out</button>
       </div>
+
       <!-- Always visible close -->
       <button id="btn-close-profile" class="btn-secondary" style="width:100%;margin-top:8px;">Close</button>
     </div>
   </div>
 
-  <!-- Toast -->
   <div id="toast-container"></div>
-
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -21,6 +21,10 @@ let userLng = null;
 let currentRadius = getSavedRadius() || DEFAULT_RADIUS;
 let reports = [];
 
+function syncPosition() {
+  window._csUserPos = { lat: userLat, lng: userLng };
+}
+
 // ── Boot ─────────────────────────────────────────────────
 
 async function boot() {
@@ -56,6 +60,7 @@ async function boot() {
       if (data.results && data.results.length > 0) {
         userLat = data.results[0].latitude;
         userLng = data.results[0].longitude;
+        syncPosition();
         geoOverlay.classList.add('hidden');
         startApp();
       } else {
@@ -78,6 +83,7 @@ async function boot() {
       const pos = await getCurrentPosition(false);
       userLat = pos.lat;
       userLng = pos.lng;
+      syncPosition();
       geoOverlay.classList.add('hidden');
       startApp();
     } catch (err) {
@@ -134,6 +140,7 @@ async function startApp() {
   watchPosition((pos) => {
     userLat = pos.lat;
     userLng = pos.lng;
+    syncPosition();
     setUserPosition(userLat, userLng);
     setRadiusCircle(userLat, userLng, currentRadius);
   });

@@ -3,7 +3,7 @@
 // Caches app shell for offline/PWA install
 // ============================================================
 
-const CACHE_NAME = 'cloudsource-v2';
+const CACHE_NAME = 'cloudsource-v3';
 
 const SHELL_FILES = [
   '/',
@@ -59,8 +59,7 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('supabase') ||
     url.hostname.includes('open-meteo') ||
     url.hostname.includes('api.weather.gov') ||
-    url.hostname.includes('rainviewer.com') ||
-    url.hostname.includes('tilecache.rainviewer.com') ||
+    url.hostname.includes('mesonet.agron.iastate.edu') ||
     url.hostname.includes('tile.openstreetmap') ||
     url.hostname.includes('unpkg.com') ||
     url.hostname.includes('cdn.jsdelivr') ||

@@ -1,43 +1,41 @@
 // ============================================================
 // CloudSource — detail.js
-// Report detail popup: photo, info, voting
+// Report detail popup: photo, info, voting, photo flagging
 // ============================================================
 
 import { CONDITIONS } from './config.js';
-import { submitVote, getUserVote, getPhotoUrl } from './db.js';
+import { submitVote, getUserVote, getPhotoUrl, reportPhoto } from './db.js';
 import { timeAgo, showToast } from './utils.js';
 
 let currentReport = null;
 
-// Condition key → label + icon
 const condMap = {};
 CONDITIONS.forEach(c => { condMap[c.key] = c; });
 
-/**
- * Initialize detail modal event handlers
- */
 export function initDetail() {
   document.getElementById('btn-confirm').addEventListener('click', () => handleVote('confirm'));
   document.getElementById('btn-deny').addEventListener('click', () => handleVote('deny'));
   document.getElementById('btn-close-detail').addEventListener('click', closeDetail);
   document.querySelector('#report-detail .modal-backdrop').addEventListener('click', closeDetail);
+  document.getElementById('btn-flag-photo').addEventListener('click', handleFlagPhoto);
 }
 
-/**
- * Open the detail modal for a report
- */
 export async function openDetail(report) {
   currentReport = report;
   const modal = document.getElementById('report-detail');
 
   // Photo
   const photoEl = document.getElementById('detail-photo');
+  const flagBtn = document.getElementById('btn-flag-photo');
+
   if (report.photo_path) {
     photoEl.src = getPhotoUrl(report.photo_path);
     photoEl.classList.remove('hidden');
+    flagBtn.classList.remove('hidden');
   } else {
     photoEl.classList.add('hidden');
     photoEl.src = '';
+    flagBtn.classList.add('hidden');
   }
 
   // Condition
@@ -63,22 +61,17 @@ export async function openDetail(report) {
   document.getElementById('confirm-count').textContent = report.confirm_count || 0;
   document.getElementById('deny-count').textContent = report.deny_count || 0;
 
-  // Reset vote button states
+  // Reset vote buttons
   document.getElementById('btn-confirm').className = 'vote-btn';
   document.getElementById('btn-deny').className = 'vote-btn';
 
-  // Check if current user has voted
+  // Check existing vote
   if (window._csUser) {
     try {
       const existing = await getUserVote(report.id, window._csUser.id);
-      if (existing === 'confirm') {
-        document.getElementById('btn-confirm').classList.add('voted-confirm');
-      } else if (existing === 'deny') {
-        document.getElementById('btn-deny').classList.add('voted-deny');
-      }
-    } catch {
-      // ignore
-    }
+      if (existing === 'confirm') document.getElementById('btn-confirm').classList.add('voted-confirm');
+      else if (existing === 'deny') document.getElementById('btn-deny').classList.add('voted-deny');
+    } catch { /* ignore */ }
   }
 
   modal.classList.remove('hidden');
@@ -89,13 +82,11 @@ async function handleVote(voteType) {
     showToast('Sign in to vote', 'error');
     return;
   }
-
   if (!currentReport) return;
 
   try {
     await submitVote(currentReport.id, window._csUser.id, voteType);
 
-    // Update UI
     const confirmBtn = document.getElementById('btn-confirm');
     const denyBtn = document.getElementById('btn-deny');
     confirmBtn.className = 'vote-btn';
@@ -103,17 +94,47 @@ async function handleVote(voteType) {
 
     if (voteType === 'confirm') {
       confirmBtn.classList.add('voted-confirm');
-      const count = parseInt(document.getElementById('confirm-count').textContent) || 0;
-      document.getElementById('confirm-count').textContent = count + 1;
+      document.getElementById('confirm-count').textContent =
+        (parseInt(document.getElementById('confirm-count').textContent) || 0) + 1;
     } else {
       denyBtn.classList.add('voted-deny');
-      const count = parseInt(document.getElementById('deny-count').textContent) || 0;
-      document.getElementById('deny-count').textContent = count + 1;
+      document.getElementById('deny-count').textContent =
+        (parseInt(document.getElementById('deny-count').textContent) || 0) + 1;
     }
 
     showToast(`Vote recorded: ${voteType}`, 'success');
-  } catch (err) {
+  } catch {
     showToast('Failed to vote', 'error');
+  }
+}
+
+async function handleFlagPhoto() {
+  if (!window._csUser) {
+    showToast('Sign in to report photos', 'error');
+    return;
+  }
+  if (!currentReport) return;
+
+  // Confirm before flagging
+  if (!confirm('Report this photo as inappropriate? It will be hidden immediately.')) return;
+
+  const btn = document.getElementById('btn-flag-photo');
+  btn.disabled = true;
+
+  try {
+    await reportPhoto(currentReport.id, window._csUser.id, 'flagged by user');
+    showToast('Photo reported and hidden', 'success');
+
+    // Hide photo in current view
+    document.getElementById('detail-photo').classList.add('hidden');
+    btn.classList.add('hidden');
+  } catch (err) {
+    const msg = err.message?.includes('duplicate') || err.message?.includes('unique')
+      ? 'You already reported this photo'
+      : 'Failed to report photo';
+    showToast(msg, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 

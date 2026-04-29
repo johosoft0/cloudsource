@@ -158,6 +158,22 @@ export function getPhotoUrl(path) {
   return data.publicUrl;
 }
 
+// ── Photo Reports (moderation) ───────────────────────────
+
+export async function reportPhoto(reportId, userId, reason = '') {
+  const { data, error } = await supabase
+    .from('photo_reports')
+    .insert({
+      report_id: reportId,
+      user_id: userId,
+      reason: reason || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // ── Realtime ─────────────────────────────────────────────
 
 let realtimeChannel = null;

@@ -1,19 +1,18 @@
 // ============================================================
 // CloudSource — report.js
-// Report submission: camera, photo, condition picker, upload
+// Report submission: camera, EXIF geotag, condition, upload
 // ============================================================
 
-import { CONDITIONS } from './config.js';
+import { CONDITIONS, PHOTO_GPS_MAX_DISTANCE_MI } from './config.js';
 import { submitReport, uploadPhoto } from './db.js';
-import { resizeImage, showToast } from './utils.js';
+import { resizeImage, extractExifGps, distanceMiles, getCurrentPosition, showToast } from './utils.js';
 
 let selectedCondition = null;
 let photoBlob = null;
+let photoGps = null; // GPS from photo EXIF
+let rawFile = null;  // original file for EXIF reading
 let submitCallback = null;
 
-/**
- * Initialize the report form UI
- */
 export function initReportForm(onSubmitted) {
   submitCallback = onSubmitted;
 
@@ -30,28 +29,18 @@ export function initReportForm(onSubmitted) {
     grid.appendChild(btn);
   });
 
-  // Camera button
   document.getElementById('btn-camera').addEventListener('click', () => {
     document.getElementById('photo-input').click();
   });
-
-  // Photo input
   document.getElementById('photo-input').addEventListener('change', handlePhotoSelect);
 
-  // Note character count
   const noteEl = document.getElementById('report-note');
   noteEl.addEventListener('input', () => {
-    const count = noteEl.value.length;
-    document.querySelector('.char-count').textContent = `${count}/140`;
+    document.querySelector('.char-count').textContent = `${noteEl.value.length}/140`;
   });
 
-  // Cancel
   document.getElementById('btn-cancel').addEventListener('click', closeReportModal);
-
-  // Submit
   document.getElementById('btn-submit').addEventListener('click', handleSubmit);
-
-  // Backdrop close
   document.querySelector('#report-modal .modal-backdrop').addEventListener('click', closeReportModal);
 }
 
@@ -66,7 +55,20 @@ async function handlePhotoSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
 
+  rawFile = file;
+  photoGps = null;
+
   try {
+    // Extract EXIF GPS before resizing (resize strips EXIF)
+    const gps = await extractExifGps(file);
+    if (gps) {
+      photoGps = gps;
+      updateGpsIndicator(true, gps);
+    } else {
+      updateGpsIndicator(false);
+    }
+
+    // Resize for upload
     photoBlob = await resizeImage(file);
     const preview = document.getElementById('photo-preview');
     preview.src = URL.createObjectURL(photoBlob);
@@ -74,6 +76,17 @@ async function handlePhotoSelect(e) {
     document.getElementById('btn-camera').style.display = 'none';
   } catch {
     showToast('Failed to process photo', 'error');
+  }
+}
+
+function updateGpsIndicator(hasGps, gps = null) {
+  const indicator = document.getElementById('photo-gps-indicator');
+  if (!indicator) return;
+  if (hasGps && gps) {
+    indicator.textContent = `📍 Photo GPS: ${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}`;
+    indicator.classList.remove('hidden');
+  } else {
+    indicator.classList.add('hidden');
   }
 }
 
@@ -88,26 +101,34 @@ async function handleSubmit() {
   btn.innerHTML = '<span class="spinner"></span>';
 
   try {
-    // Get current position for the report
-    const pos = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-        reject,
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    });
+    // Get device GPS (high accuracy for submissions)
+    const devicePos = await getCurrentPosition(true);
 
-    // Upload photo if present
+    // Determine report location: use photo GPS if available and within range
+    let reportLat = devicePos.lat;
+    let reportLng = devicePos.lng;
+
+    if (photoGps) {
+      const dist = distanceMiles(devicePos.lat, devicePos.lng, photoGps.lat, photoGps.lng);
+      if (dist <= PHOTO_GPS_MAX_DISTANCE_MI) {
+        reportLat = photoGps.lat;
+        reportLng = photoGps.lng;
+      } else {
+        showToast(`Photo GPS too far (${dist.toFixed(1)}mi), using device location`);
+      }
+    }
+
+    // Upload photo
     let photoPath = null;
     if (photoBlob && window._csUser) {
       photoPath = await uploadPhoto(window._csUser.id, photoBlob);
     }
 
-    // Submit report
+    // Submit
     const report = await submitReport({
       userId: window._csUser.id,
-      lat: pos.lat,
-      lng: pos.lng,
+      lat: reportLat,
+      lng: reportLng,
       condition: selectedCondition,
       intensity: parseInt(document.getElementById('intensity-slider').value),
       note: document.getElementById('report-note').value.trim(),
@@ -116,7 +137,6 @@ async function handleSubmit() {
 
     showToast('Report submitted!', 'success');
     closeReportModal();
-
     if (submitCallback) submitCallback(report);
   } catch (err) {
     console.error('Submit error:', err);
@@ -145,6 +165,8 @@ export function closeReportModal() {
 function resetForm() {
   selectedCondition = null;
   photoBlob = null;
+  photoGps = null;
+  rawFile = null;
   document.querySelectorAll('.condition-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('intensity-slider').value = 3;
   document.getElementById('report-note').value = '';
@@ -155,4 +177,5 @@ function resetForm() {
   document.getElementById('photo-input').value = '';
   document.getElementById('btn-submit').disabled = false;
   document.getElementById('btn-submit').textContent = 'Submit Report';
+  updateGpsIndicator(false);
 }

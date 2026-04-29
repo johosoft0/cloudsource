@@ -24,35 +24,73 @@ let reports = [];
 // ── Boot ─────────────────────────────────────────────────
 
 async function boot() {
-  // 1. Geolocation is REQUIRED — gate everything on it
   const geoOverlay = document.getElementById('geo-overlay');
   const geoRetry = document.getElementById('geo-retry');
   const geoStatus = document.getElementById('geo-status');
+  const zipFallback = document.getElementById('geo-zip-fallback');
 
   if (geoRetry) {
     geoRetry.addEventListener('click', () => requestLocation());
   }
 
+  // TODO: REMOVE BEFORE PRODUCTION — zip code fallback for testing
+  const zipGoBtn = document.getElementById('geo-zip-go');
+  const zipInput = document.getElementById('geo-zip-input');
+  if (zipGoBtn) {
+    zipGoBtn.addEventListener('click', () => handleZipFallback());
+    zipInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleZipFallback(); });
+  }
+
+  async function handleZipFallback() {
+    const zip = zipInput.value.trim();
+    if (!/^\d{5}$/.test(zip)) {
+      geoStatus.textContent = 'Enter a valid 5-digit zip code.';
+      return;
+    }
+    zipGoBtn.disabled = true;
+    zipGoBtn.innerHTML = '<span class="spinner"></span>';
+    try {
+      // Use Open-Meteo geocoding API (free, no key)
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${zip}&count=1&language=en&format=json`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        userLat = data.results[0].latitude;
+        userLng = data.results[0].longitude;
+        geoOverlay.classList.add('hidden');
+        startApp();
+      } else {
+        geoStatus.textContent = 'Zip code not found. Try another.';
+      }
+    } catch {
+      geoStatus.textContent = 'Geocoding failed. Check your connection.';
+    } finally {
+      zipGoBtn.disabled = false;
+      zipGoBtn.textContent = 'Go';
+    }
+  }
+
   async function requestLocation() {
     geoStatus.textContent = 'Requesting location...';
     geoRetry.classList.add('hidden');
+    if (zipFallback) zipFallback.classList.add('hidden');
 
     try {
-      const pos = await getCurrentPosition(false); // coarse is fine
+      const pos = await getCurrentPosition(false);
       userLat = pos.lat;
       userLng = pos.lng;
       geoOverlay.classList.add('hidden');
       startApp();
     } catch (err) {
       if (err.code === 1) {
-        // Permission denied
-        geoStatus.textContent = 'Location access was denied. CloudSource needs your location to show nearby weather reports.';
+        geoStatus.textContent = 'Location access was denied.';
       } else if (err.code === 2) {
         geoStatus.textContent = 'Location unavailable. Make sure location services are enabled.';
       } else {
-        geoStatus.textContent = 'Location request timed out. Please try again.';
+        geoStatus.textContent = 'Location request timed out.';
       }
       geoRetry.classList.remove('hidden');
+      // TODO: REMOVE BEFORE PRODUCTION — show zip fallback on failure
+      if (zipFallback) zipFallback.classList.remove('hidden');
     }
   }
 

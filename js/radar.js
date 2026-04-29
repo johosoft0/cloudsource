@@ -51,7 +51,10 @@ async function fetchFrames() {
     // Remove old tile layers
     tileLayers.forEach(l => { try { map.removeLayer(l); } catch {} });
 
-    // Create new tile layers in the radar pane
+    // RainViewer serves radar tiles up to about z12.
+    // maxNativeZoom tells Leaflet to never request above z12 from the server —
+    // at higher zoom levels it fetches z12 tiles and upscales them client-side.
+    // This prevents the "Zoom Level Not Supported" error tiles entirely.
     tileLayers = frames.map(f =>
       L.tileLayer(
         `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
@@ -59,6 +62,9 @@ async function fetchFrames() {
           pane: 'radarPane',
           opacity: 0,
           zIndex: 250,
+          maxNativeZoom: 8,
+          maxZoom: 19,
+          errorTileUrl: '',
         }
       )
     );

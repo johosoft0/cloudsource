@@ -5,7 +5,7 @@
 
 import { CONDITIONS, PHOTO_GPS_MAX_DISTANCE_MI } from './config.js';
 import { submitReport, uploadPhoto } from './db.js';
-import { resizeImage, extractExifGps, distanceMiles, getCurrentPosition, showToast } from './utils.js';
+import { resizeImage, extractExifGps, distanceMiles, fuzzLocation, getCurrentPosition, showToast } from './utils.js';
 
 let selectedCondition = null;
 let photoBlob = null;
@@ -101,22 +101,35 @@ async function handleSubmit() {
   btn.innerHTML = '<span class="spinner"></span>';
 
   try {
-    // Get device GPS (high accuracy for submissions)
-    const devicePos = await getCurrentPosition(true);
+    // Get device position — try fresh GPS first, fall back to known position
+    let devicePos;
+    try {
+      devicePos = await getCurrentPosition(false);
+    } catch {
+      // GPS denied or failed — use the position we already have from boot
+      if (window._csUserPos) {
+        devicePos = { lat: window._csUserPos.lat, lng: window._csUserPos.lng };
+      } else {
+        throw new Error('Location unavailable. Cannot submit without a location.');
+      }
+    }
 
-    // Determine report location: use photo GPS if available and within range
-    let reportLat = devicePos.lat;
-    let reportLng = devicePos.lng;
+    // Determine base location: prefer photo EXIF GPS if within range
+    let baseLat = devicePos.lat;
+    let baseLng = devicePos.lng;
 
     if (photoGps) {
       const dist = distanceMiles(devicePos.lat, devicePos.lng, photoGps.lat, photoGps.lng);
       if (dist <= PHOTO_GPS_MAX_DISTANCE_MI) {
-        reportLat = photoGps.lat;
-        reportLng = photoGps.lng;
+        baseLat = photoGps.lat;
+        baseLng = photoGps.lng;
       } else {
         showToast(`Photo GPS too far (${dist.toFixed(1)}mi), using device location`);
       }
     }
+
+    // Fuzz location by ~100m so exact position isn't broadcast
+    const fuzzed = fuzzLocation(baseLat, baseLng);
 
     // Upload photo
     let photoPath = null;
@@ -127,8 +140,8 @@ async function handleSubmit() {
     // Submit
     const report = await submitReport({
       userId: window._csUser.id,
-      lat: reportLat,
-      lng: reportLng,
+      lat: fuzzed.lat,
+      lng: fuzzed.lng,
       condition: selectedCondition,
       intensity: parseInt(document.getElementById('intensity-slider').value),
       note: document.getElementById('report-note').value.trim(),
@@ -178,4 +191,4 @@ function resetForm() {
   document.getElementById('btn-submit').disabled = false;
   document.getElementById('btn-submit').textContent = 'Submit Report';
   updateGpsIndicator(false);
-}
+  }

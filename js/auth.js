@@ -61,6 +61,8 @@ export async function initAuth(userChangeCallback) {
       currentProfile = null;
     }
     renderProfileView();
+  } else {
+    renderAuthView();
   }
 
   return user;

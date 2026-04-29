@@ -1,32 +1,46 @@
 // ============================================================
 // CloudSource — auth.js
-// Auth, profile editing, XP display, achievements
+// Auth, tabbed profile (General / Reporter / Community)
 // ============================================================
 
-import { ACHIEVEMENTS, REPORTER_LEVEL_DIVISOR, COMMUNITY_LEVEL_DIVISOR } from './config.js';
+import { ACHIEVEMENTS, REPORTER_LEVELS, COMMUNITY_LEVELS } from './config.js';
 import { getUser, getProfile, updateProfile, signInWithEmail, signOut, onAuthChange } from './db.js';
 import { showToast } from './utils.js';
 
 let currentUser = null;
 let currentProfile = null;
-let isEditing = false;
 
-/**
- * Initialize auth UI and state
- */
+// ── Init ─────────────────────────────────────────────────
+
 export async function initAuth() {
-  // Wire up event listeners
+  // Auth form
   document.getElementById('btn-send-magic').addEventListener('click', handleMagicLink);
   document.getElementById('auth-email').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleMagicLink();
   });
+
+  // Profile actions
   document.getElementById('btn-signout').addEventListener('click', handleSignOut);
   document.getElementById('btn-profile').addEventListener('click', openProfileModal);
   document.getElementById('btn-close-profile').addEventListener('click', closeProfileModal);
   document.querySelector('#profile-modal .modal-backdrop').addEventListener('click', closeProfileModal);
-  document.getElementById('btn-edit-name').addEventListener('click', startEditing);
+
+  // Name editing
+  document.getElementById('btn-edit-name').addEventListener('click', () => {
+    const row = document.getElementById('name-edit-row');
+    const input = document.getElementById('edit-name-input');
+    input.value = currentProfile?.display_name || '';
+    row.classList.remove('hidden');
+    document.getElementById('btn-edit-name').classList.add('hidden');
+    input.focus();
+  });
   document.getElementById('btn-save-name').addEventListener('click', saveName);
-  document.getElementById('btn-cancel-edit').addEventListener('click', cancelEditing);
+  document.getElementById('btn-cancel-edit').addEventListener('click', cancelEdit);
+
+  // Tab switching
+  document.querySelectorAll('#profile-view .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
 
   // Auth state listener
   onAuthChange(async (user) => {
@@ -41,7 +55,7 @@ export async function initAuth() {
     }
   });
 
-  // Initial session check
+  // Initial session
   const user = await getUser();
   currentUser = user;
   window._csUser = user;
@@ -51,11 +65,10 @@ export async function initAuth() {
   } else {
     switchToAuthView();
   }
-
   return user;
 }
 
-// ── View Switching (the ONLY place visibility is controlled) ──
+// ── View Switching ───────────────────────────────────────
 
 function switchToAuthView() {
   document.getElementById('auth-view').classList.remove('hidden');
@@ -67,22 +80,35 @@ function switchToAuthView() {
 function switchToProfileView() {
   document.getElementById('auth-view').classList.add('hidden');
   document.getElementById('profile-view').classList.remove('hidden');
-  populateProfile();
+  cancelEdit();
+  populateGeneral();
+  populateReporter();
+  populateCommunity();
+  switchTab('general');
 }
 
-// ── Profile Population ───────────────────────────────────
+// ── Tab Switching ────────────────────────────────────────
 
-function populateProfile() {
+function switchTab(tabId) {
+  document.querySelectorAll('#profile-view .tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+  document.querySelectorAll('#profile-view .tab-content').forEach(el => {
+    el.classList.toggle('hidden', el.id !== `tab-${tabId}`);
+  });
+}
+
+// ── General Tab ──────────────────────────────────────────
+
+function populateGeneral() {
   const p = currentProfile;
-  const fallbackName = currentUser?.email?.split('@')[0] || 'Weather Watcher';
+  const fallback = currentUser?.email?.split('@')[0] || 'Weather Watcher';
 
-  // Level badge
-  document.getElementById('profile-level-badge').textContent = p?.level || 1;
+  // Header
+  const rLv = getReporterLevel(p?.xp_report || 0);
+  document.getElementById('profile-level-badge').textContent = rLv.level;
+  document.getElementById('profile-name').textContent = p?.display_name || fallback;
 
-  // Name
-  document.getElementById('profile-name').textContent = p?.display_name || fallbackName;
-
-  // Reputation label
   const rep = p?.reputation || 25;
   let repLabel = 'Newcomer';
   if (rep >= 75) repLabel = 'Local Expert';
@@ -90,11 +116,7 @@ function populateProfile() {
   else if (rep >= 25) repLabel = 'Active';
   document.getElementById('profile-rep').textContent = `${repLabel} · ${rep.toFixed(1)} rep`;
 
-  // XP levels
-  const reporterLv = Math.floor((p?.xp_report || 0) / REPORTER_LEVEL_DIVISOR) + 1;
-  const communityLv = Math.floor((p?.xp_community || 0) / COMMUNITY_LEVEL_DIVISOR) + 1;
-
-  // Stats grid
+  // Stats
   document.getElementById('profile-stats').innerHTML = `
     <div class="stat-card">
       <div class="stat-value">${p?.total_reports || 0}</div>
@@ -105,14 +127,12 @@ function populateProfile() {
       <div class="stat-label">Day Streak</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${reporterLv}</div>
+      <div class="stat-value">${rLv.level}</div>
       <div class="stat-label">Reporter Lv</div>
-      <div class="stat-xp">${p?.xp_report || 0} XP</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${communityLv}</div>
+      <div class="stat-value">${getCommunityLevel(p?.xp_community || 0).level}</div>
       <div class="stat-label">Community Lv</div>
-      <div class="stat-xp">${p?.xp_community || 0} XP</div>
     </div>
   `;
 
@@ -130,55 +150,160 @@ function populateProfile() {
       </div>
     `).join('')}
   `;
-
-  // Hide edit controls
-  document.getElementById('name-edit-row').classList.add('hidden');
 }
 
-// ── Profile Editing ──────────────────────────────────────
+// ── Reporter Tab ─────────────────────────────────────────
 
-function startEditing() {
-  isEditing = true;
-  const nameInput = document.getElementById('edit-name-input');
-  nameInput.value = currentProfile?.display_name || '';
-  document.getElementById('name-edit-row').classList.remove('hidden');
-  document.getElementById('btn-edit-name').classList.add('hidden');
-  nameInput.focus();
+function populateReporter() {
+  const xp = currentProfile?.xp_report || 0;
+  const current = getReporterLevel(xp);
+  const nextIdx = REPORTER_LEVELS.findIndex(l => l.level === current.level) + 1;
+  const next = REPORTER_LEVELS[nextIdx] || null;
+  const xpInLevel = next ? xp - current.xp : 0;
+  const xpNeeded = next ? next.xp - current.xp : 1;
+  const pct = next ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100;
+
+  const el = document.getElementById('reporter-content');
+  el.innerHTML = `
+    <div class="level-hero">
+      <span class="level-hero-badge">${current.badge}</span>
+      <div class="level-hero-info">
+        <div class="level-hero-title">${current.title}</div>
+        <div class="level-hero-sub">Reporter Level ${current.level}</div>
+      </div>
+    </div>
+
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="xp-bar-label">
+        <span>${xp} XP</span>
+        <span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span>
+      </div>
+    </div>
+
+    <div class="xp-breakdown">
+      <h4>XP per report</h4>
+      <div class="xp-row"><span>Base submission</span><span>+10</span></div>
+      <div class="xp-row"><span>Attach photo</span><span>+10</span></div>
+      <div class="xp-row"><span>Add note</span><span>+5</span></div>
+      <div class="xp-row"><span>Set intensity</span><span>+5</span></div>
+      <div class="xp-row total"><span>Max per report</span><span>30</span></div>
+    </div>
+
+    <h4 style="margin-top:16px;">All Ranks</h4>
+    <div class="level-list">
+      ${REPORTER_LEVELS.map(l => `
+        <div class="level-row ${l.level <= current.level ? 'unlocked' : 'locked'}">
+          <span class="level-row-badge">${l.badge}</span>
+          <div class="level-row-info">
+            <span class="level-row-title">Lv ${l.level} — ${l.title}</span>
+            <span class="level-row-xp">${l.xp} XP</span>
+          </div>
+          ${l.level === current.level ? '<span class="level-you">YOU</span>' : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
+
+// ── Community Tab ────────────────────────────────────────
+
+function populateCommunity() {
+  const xp = currentProfile?.xp_community || 0;
+  const current = getCommunityLevel(xp);
+  const nextIdx = COMMUNITY_LEVELS.findIndex(l => l.level === current.level) + 1;
+  const next = COMMUNITY_LEVELS[nextIdx] || null;
+  const xpInLevel = next ? xp - current.xp : 0;
+  const xpNeeded = next ? next.xp - current.xp : 1;
+  const pct = next ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100;
+
+  const el = document.getElementById('community-content');
+  el.innerHTML = `
+    <div class="level-hero">
+      <span class="level-hero-badge">${current.badge}</span>
+      <div class="level-hero-info">
+        <div class="level-hero-title">${current.title}</div>
+        <div class="level-hero-sub">Community Level ${current.level}</div>
+      </div>
+    </div>
+
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill xp-bar-community" style="width:${pct}%"></div>
+      </div>
+      <div class="xp-bar-label">
+        <span>${xp} XP</span>
+        <span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span>
+      </div>
+    </div>
+
+    <div class="xp-breakdown">
+      <h4>XP per action</h4>
+      <div class="xp-row"><span>Confirm or deny a report</span><span>+3</span></div>
+    </div>
+
+    <h4 style="margin-top:16px;">All Ranks</h4>
+    <div class="level-list">
+      ${COMMUNITY_LEVELS.map(l => `
+        <div class="level-row ${l.level <= current.level ? 'unlocked' : 'locked'}">
+          <span class="level-row-badge">${l.badge}</span>
+          <div class="level-row-info">
+            <span class="level-row-title">Lv ${l.level} — ${l.title}</span>
+            <span class="level-row-xp">${l.xp} XP</span>
+          </div>
+          ${l.level === current.level ? '<span class="level-you">YOU</span>' : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ── Level Helpers ────────────────────────────────────────
+
+function getReporterLevel(xp) {
+  let result = REPORTER_LEVELS[0];
+  for (const l of REPORTER_LEVELS) {
+    if (xp >= l.xp) result = l;
+    else break;
+  }
+  return result;
+}
+
+function getCommunityLevel(xp) {
+  let result = COMMUNITY_LEVELS[0];
+  for (const l of COMMUNITY_LEVELS) {
+    if (xp >= l.xp) result = l;
+    else break;
+  }
+  return result;
+}
+
+// ── Name Editing ─────────────────────────────────────────
 
 async function saveName() {
-  const nameInput = document.getElementById('edit-name-input');
-  const newName = nameInput.value.trim();
-
-  if (!newName || newName.length < 2) {
-    showToast('Name must be at least 2 characters', 'error');
-    return;
-  }
-  if (newName.length > 20) {
-    showToast('Name must be 20 characters or less', 'error');
-    return;
-  }
+  const input = document.getElementById('edit-name-input');
+  const name = input.value.trim();
+  if (!name || name.length < 2) { showToast('Name must be at least 2 characters', 'error'); return; }
+  if (name.length > 20) { showToast('Name must be 20 characters or less', 'error'); return; }
 
   const btn = document.getElementById('btn-save-name');
   btn.disabled = true;
-
   try {
-    currentProfile = await updateProfile(currentUser.id, { display_name: newName });
+    currentProfile = await updateProfile(currentUser.id, { display_name: name });
     showToast('Name updated!', 'success');
-    cancelEditing();
-    populateProfile();
+    cancelEdit();
+    populateGeneral();
   } catch (err) {
-    const msg = err.message?.includes('duplicate') || err.message?.includes('unique')
-      ? 'That name is already taken'
-      : 'Failed to update name';
+    const msg = (err.message || '').includes('unique') ? 'That name is already taken' : 'Failed to update name';
     showToast(msg, 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
-function cancelEditing() {
-  isEditing = false;
+function cancelEdit() {
   document.getElementById('name-edit-row').classList.add('hidden');
   document.getElementById('btn-edit-name').classList.remove('hidden');
 }
@@ -190,16 +315,13 @@ async function handleMagicLink() {
   const status = document.getElementById('auth-status');
   const btn = document.getElementById('btn-send-magic');
   const email = emailInput.value.trim();
-
   if (!email || !email.includes('@')) {
     status.textContent = 'Enter a valid email';
     status.className = 'auth-status error';
     return;
   }
-
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
-
   try {
     await signInWithEmail(email);
     status.textContent = 'Check your email for the magic link!';
@@ -224,12 +346,10 @@ async function handleSignOut() {
     switchToAuthView();
     closeProfileModal();
     showToast('Signed out');
-  } catch {
-    showToast('Failed to sign out', 'error');
-  }
+  } catch { showToast('Failed to sign out', 'error'); }
 }
 
-// ── Modal Open/Close ─────────────────────────────────────
+// ── Modal ────────────────────────────────────────────────
 
 export function openProfileModal() {
   if (currentUser) {
@@ -242,10 +362,8 @@ export function openProfileModal() {
 
 export function closeProfileModal() {
   document.getElementById('profile-modal').classList.add('hidden');
-  cancelEditing();
+  cancelEdit();
 }
-
-// ── Public Getters ───────────────────────────────────────
 
 export function getCurrentUser() { return currentUser; }
 export function getCurrentProfile() { return currentProfile; }
@@ -254,6 +372,8 @@ export async function refreshProfile() {
   if (!currentUser) return;
   try {
     currentProfile = await getProfile(currentUser.id);
-    populateProfile();
-  } catch { /* ignore */ }
+    populateGeneral();
+    populateReporter();
+    populateCommunity();
+  } catch {}
 }

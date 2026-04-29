@@ -26,7 +26,6 @@ export async function initAuth(userChangeCallback) {
   });
   document.getElementById('btn-signout').addEventListener('click', handleSignOut);
   document.getElementById('btn-profile').addEventListener('click', openProfileModal);
-  document.getElementById('btn-close-auth').addEventListener('click', closeProfileModal);
   document.getElementById('btn-close-profile').addEventListener('click', closeProfileModal);
   document.querySelector('#profile-modal .modal-backdrop').addEventListener('click', closeProfileModal);
 

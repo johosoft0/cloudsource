@@ -390,3 +390,73 @@ export async function refreshProfile() {
     populateCommunity();
   } catch {}
 }
+
+/**
+ * Check and unlock achievements based on current profile state.
+ * Called after report submission and voting.
+ * @param {object} opts - optional context { isNightReport: bool }
+ */
+export async function checkAchievements(opts = {}) {
+  if (!currentUser || !currentProfile) return;
+
+  const p = currentProfile;
+  const earned = Array.isArray(p.achievements) ? [...p.achievements] : [];
+  const newly = [];
+
+  function tryUnlock(key) {
+    if (!earned.includes(key)) {
+      earned.push(key);
+      newly.push(key);
+    }
+  }
+
+  // Report milestones
+  if (p.total_reports >= 1)   tryUnlock('first_drop');
+  if (p.total_reports >= 10)  tryUnlock('ten_reports');
+  if (p.total_reports >= 50)  tryUnlock('fifty_reports');
+  if (p.total_reports >= 100) tryUnlock('century');
+
+  // Streaks
+  if (p.streak_days >= 7)  tryUnlock('sunrise_streak');
+  if (p.streak_days >= 14) tryUnlock('fortnight');
+
+  // Reputation
+  if (p.reputation >= 75) tryUnlock('local_legend');
+
+  // Night owl (passed in from report.js)
+  if (opts.isNightReport) tryUnlock('night_owl');
+
+  // Votes (community XP / 3 = approximate vote count)
+  const approxVotes = Math.floor((p.xp_community || 0) / 3);
+  if (approxVotes >= 1)  tryUnlock('first_vote');
+  if (approxVotes >= 50) tryUnlock('fifty_votes');
+
+  // Level milestones
+  const rLv = getReporterLevel(p.xp_report || 0).level;
+  const cLv = getCommunityLevel(p.xp_community || 0).level;
+  if (rLv >= 5)  tryUnlock('reporter_5');
+  if (rLv >= 10) tryUnlock('reporter_10');
+  if (cLv >= 5)  tryUnlock('community_5');
+  if (cLv >= 10) tryUnlock('community_10');
+
+  // Shutterbug — approximate from XP (each photo report gives +10 bonus)
+  // Not perfectly accurate but good enough without a separate counter
+  if (p.total_reports >= 10 && p.xp_report >= p.total_reports * 15) tryUnlock('shutterbug');
+
+  // Save if anything new was unlocked
+  if (newly.length > 0) {
+    try {
+      await updateProfile(currentUser.id, { achievements: earned });
+      currentProfile.achievements = earned;
+
+      // Show toast for each new achievement
+      const allAch = ACHIEVEMENTS;
+      for (const key of newly) {
+        const a = allAch.find(x => x.key === key);
+        if (a) showToast(`${a.icon} Achievement: ${a.name}!`, 'success');
+      }
+
+      populateGeneral();
+    } catch { /* non-critical */ }
+  }
+}

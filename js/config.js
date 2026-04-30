@@ -25,32 +25,52 @@ export const XP_PHOTO_BONUS = 10;
 export const XP_NOTE_BONUS = 5;
 export const XP_VOTE = 3;
 
-// Reporter levels — 100 XP per level, 10 levels
+// Reporter levels — 20 levels
 export const REPORTER_LEVELS = [
-  { level: 1,  xp: 0,    title: 'Drizzle Spotter',   badge: '🌱' },
-  { level: 2,  xp: 100,  title: 'Cloud Watcher',     badge: '☁️' },
-  { level: 3,  xp: 200,  title: 'Rain Reader',       badge: '🌦️' },
-  { level: 4,  xp: 300,  title: 'Weather Scout',     badge: '🔭' },
-  { level: 5,  xp: 400,  title: 'Storm Tracker',     badge: '⛈️' },
-  { level: 6,  xp: 500,  title: 'Forecast Runner',   badge: '🏃' },
-  { level: 7,  xp: 600,  title: 'Tempest Sage',      badge: '🌪️' },
-  { level: 8,  xp: 700,  title: 'Cyclone Hunter',    badge: '🎯' },
-  { level: 9,  xp: 800,  title: 'Weather Oracle',    badge: '🔮' },
-  { level: 10, xp: 900,  title: 'Atmosphere Master', badge: '👑' },
+  { level: 1,  xp: 0,     title: 'Drizzle Spotter',     badge: '🌱' },
+  { level: 2,  xp: 100,   title: 'Cloud Watcher',       badge: '☁️' },
+  { level: 3,  xp: 200,   title: 'Rain Reader',         badge: '🌦️' },
+  { level: 4,  xp: 350,   title: 'Weather Scout',       badge: '🔭' },
+  { level: 5,  xp: 500,   title: 'Storm Tracker',       badge: '⛈️' },
+  { level: 6,  xp: 700,   title: 'Forecast Runner',     badge: '🏃' },
+  { level: 7,  xp: 900,   title: 'Tempest Sage',        badge: '🌪️' },
+  { level: 8,  xp: 1150,  title: 'Cyclone Hunter',      badge: '🎯' },
+  { level: 9,  xp: 1400,  title: 'Weather Oracle',      badge: '🔮' },
+  { level: 10, xp: 1700,  title: 'Atmosphere Master',   badge: '👑' },
+  { level: 11, xp: 2000,  title: 'Barometer Baron',     badge: '🌡️' },
+  { level: 12, xp: 2400,  title: 'Nimbus Captain',      badge: '⚓' },
+  { level: 13, xp: 2800,  title: 'Gale Commander',      badge: '🫡' },
+  { level: 14, xp: 3300,  title: 'Thunder Marshal',     badge: '⚡' },
+  { level: 15, xp: 3800,  title: 'Jet Stream Rider',    badge: '🛩️' },
+  { level: 16, xp: 4400,  title: 'Pressure Front Ace',  badge: '🃏' },
+  { level: 17, xp: 5000,  title: 'Supercell Wrangler',  badge: '🤠' },
+  { level: 18, xp: 5800,  title: 'Eye of the Storm',    badge: '🌀' },
+  { level: 19, xp: 6600,  title: 'Climate Sovereign',   badge: '🏔️' },
+  { level: 20, xp: 7500,  title: 'Force of Nature',     badge: '💎' },
 ];
 
-// Community levels — 50 XP per level, 10 levels
+// Community levels — 20 levels
 export const COMMUNITY_LEVELS = [
-  { level: 1,  xp: 0,    title: 'Observer',    badge: '👁️' },
-  { level: 2,  xp: 50,   title: 'Responder',   badge: '💬' },
-  { level: 3,  xp: 100,  title: 'Verifier',    badge: '✅' },
-  { level: 4,  xp: 150,  title: 'Validator',    badge: '🛡️' },
-  { level: 5,  xp: 200,  title: 'Guardian',     badge: '⚔️' },
-  { level: 6,  xp: 250,  title: 'Sentinel',     badge: '🗼' },
-  { level: 7,  xp: 300,  title: 'Watchkeeper',  badge: '🔔' },
-  { level: 8,  xp: 400,  title: 'Warden',       badge: '🏛️' },
-  { level: 9,  xp: 500,  title: 'Overseer',     badge: '🦅' },
-  { level: 10, xp: 650,  title: 'Steward',      badge: '🌟' },
+  { level: 1,  xp: 0,     title: 'Observer',            badge: '👁️' },
+  { level: 2,  xp: 50,    title: 'Responder',           badge: '💬' },
+  { level: 3,  xp: 100,   title: 'Verifier',            badge: '✅' },
+  { level: 4,  xp: 175,   title: 'Validator',           badge: '🛡️' },
+  { level: 5,  xp: 250,   title: 'Guardian',            badge: '⚔️' },
+  { level: 6,  xp: 350,   title: 'Sentinel',            badge: '🗼' },
+  { level: 7,  xp: 450,   title: 'Watchkeeper',         badge: '🔔' },
+  { level: 8,  xp: 575,   title: 'Warden',              badge: '🏛️' },
+  { level: 9,  xp: 700,   title: 'Overseer',            badge: '🦅' },
+  { level: 10, xp: 850,   title: 'Steward',             badge: '🌟' },
+  { level: 11, xp: 1000,  title: 'Arbiter',             badge: '⚖️' },
+  { level: 12, xp: 1200,  title: 'Truthseeker',         badge: '🔍' },
+  { level: 13, xp: 1400,  title: 'Signal Keeper',       badge: '📡' },
+  { level: 14, xp: 1650,  title: 'Consensus Builder',   badge: '🤝' },
+  { level: 15, xp: 1900,  title: 'Trust Anchor',        badge: '⚓' },
+  { level: 16, xp: 2200,  title: 'Weather Judge',       badge: '🧑‍⚖️' },
+  { level: 17, xp: 2500,  title: 'Beacon Warden',       badge: '🗽' },
+  { level: 18, xp: 2900,  title: 'Network Pillar',      badge: '🏗️' },
+  { level: 19, xp: 3300,  title: 'Grand Moderator',     badge: '🏅' },
+  { level: 20, xp: 3750,  title: 'Voice of the Crowd',  badge: '💎' },
 ];
 
 // Condition definitions
@@ -67,14 +87,21 @@ export const CONDITIONS = [
   { key: 'other',        icon: '🌀', label: 'Other',       color: '#f472b6' },
 ];
 
-// Achievement definitions
+// Achievement definitions — 'check' is a function(profile) => bool, evaluated client-side
 export const ACHIEVEMENTS = [
-  { key: 'first_drop',     icon: '💧', name: 'First Drop',      desc: 'Submit your first report' },
-  { key: 'early_warning',  icon: '⚡', name: 'Early Warning',   desc: 'First to report a confirmed condition' },
-  { key: 'storm_chaser',   icon: '🌪️', name: 'Storm Chaser',    desc: 'Report during a severe weather alert' },
-  { key: 'sunrise_streak', icon: '🌅', name: 'Sunrise Streak',  desc: '7-day report streak' },
-  { key: 'local_legend',   icon: '⭐', name: 'Local Legend',    desc: 'Reach reputation 75+' },
-  { key: 'ten_reports',    icon: '🔟', name: 'Double Digits',   desc: 'Submit 10 reports' },
-  { key: 'fifty_reports',  icon: '🏆', name: 'Half Century',    desc: 'Submit 50 reports' },
-  { key: 'night_owl',      icon: '🦉', name: 'Night Owl',       desc: 'Report between midnight and 5 AM' },
+  { key: 'first_drop',       icon: '💧', name: 'First Drop',      desc: 'Submit your first report' },
+  { key: 'ten_reports',      icon: '🔟', name: 'Double Digits',   desc: 'Submit 10 reports' },
+  { key: 'fifty_reports',    icon: '🏆', name: 'Half Century',    desc: 'Submit 50 reports' },
+  { key: 'century',          icon: '💯', name: 'Century Club',    desc: 'Submit 100 reports' },
+  { key: 'sunrise_streak',   icon: '🌅', name: 'Sunrise Streak',  desc: '7-day report streak' },
+  { key: 'fortnight',        icon: '📅', name: 'Fortnight',       desc: '14-day report streak' },
+  { key: 'local_legend',     icon: '⭐', name: 'Local Legend',    desc: 'Reach reputation 75+' },
+  { key: 'night_owl',        icon: '🦉', name: 'Night Owl',       desc: 'Report between midnight and 5 AM' },
+  { key: 'shutterbug',       icon: '📸', name: 'Shutterbug',      desc: 'Submit 10 reports with photos' },
+  { key: 'first_vote',       icon: '🗳️', name: 'Civic Duty',      desc: 'Cast your first vote' },
+  { key: 'fifty_votes',      icon: '📊', name: 'Poll Worker',     desc: 'Cast 50 votes' },
+  { key: 'reporter_5',       icon: '🏅', name: 'Storm Tracker',   desc: 'Reach Reporter Level 5' },
+  { key: 'reporter_10',      icon: '👑', name: 'Atmosphere Master',desc: 'Reach Reporter Level 10' },
+  { key: 'community_5',      icon: '⚔️', name: 'Guardian',        desc: 'Reach Community Level 5' },
+  { key: 'community_10',     icon: '🌟', name: 'Steward',         desc: 'Reach Community Level 10' },
 ];

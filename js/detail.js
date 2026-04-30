@@ -6,6 +6,7 @@
 import { CONDITIONS } from './config.js';
 import { submitVote, getUserVote, getPhotoUrl, reportPhoto } from './db.js';
 import { timeAgo, distanceMiles, showToast, showXpFloat, getModMode } from './utils.js';
+import { refreshProfile, checkAchievements } from './auth.js';
 
 const VOTE_RADIUS_MILES = 5;
 let currentReport = null;
@@ -170,6 +171,10 @@ async function handleVote(voteType) {
     showToast(`Vote recorded: ${voteType}`, 'success');
     const votedBtn = voteType === 'confirm' ? confirmBtn : denyBtn;
     showXpFloat(votedBtn, 3, 'community');
+
+    // Update profile and check achievements
+    await refreshProfile();
+    await checkAchievements();
   } catch (err) {
     const msg = (err.message || '').includes('unique')
       ? 'You already voted on this report'

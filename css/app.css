@@ -209,6 +209,31 @@ input, textarea {
   color: var(--accent);
 }
 
+/* ── Help Button ── */
+#btn-help {
+  position: fixed;
+  bottom: 152px;
+  left: 16px;
+  z-index: var(--z-ui);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+#btn-help:active {
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+
 /* ── Timeline Panel ── */
 #timeline-panel {
   position: fixed;
@@ -1301,4 +1326,44 @@ input, textarea {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+/* ── Help Modal ── */
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.help-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.help-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.help-item strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.help-item p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.help-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
 }

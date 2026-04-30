@@ -11,7 +11,7 @@ import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderR
 import { initReportForm, openReportModal } from './report.js';
 import { initTimeline, setTimelineReports, isTimelineLive } from './timeline.js';
 import { initDetail, openDetail } from './detail.js';
-import { initAuth, refreshProfile } from './auth.js';
+import { initAuth, refreshProfile, checkAchievements } from './auth.js';
 import { initRadar, refreshRadar } from './radar.js';
 
 // ── App State ────────────────────────────────────────────
@@ -124,6 +124,9 @@ async function startApp() {
   subscribeToReports(onRealtimeReport);
   await initRadar(leafletMap);
 
+  // Help modal
+  initHelp();
+
   // Watch position updates
   watchPosition((pos) => {
     userLat = pos.lat;
@@ -182,7 +185,34 @@ function onRealtimeReport(newReport) {
 
 async function onReportSubmitted() {
   await loadReports();
-  refreshProfile();
+  await refreshProfile();
+  const hour = new Date().getHours();
+  await checkAchievements({ isNightReport: hour >= 0 && hour < 5 });
+}
+
+// ── Help Modal ───────────────────────────────────────────
+
+function initHelp() {
+  const modal = document.getElementById('help-modal');
+  const closeBtn = document.getElementById('btn-close-help');
+  const helpBtn = document.getElementById('btn-help');
+
+  closeBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    localStorage.setItem('cs_help_shown', 'true');
+  });
+
+  document.querySelector('#help-modal .modal-backdrop').addEventListener('click', () => {
+    modal.classList.add('hidden');
+    localStorage.setItem('cs_help_shown', 'true');
+  });
+
+  helpBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+
+  // Show on first run
+  if (!localStorage.getItem('cs_help_shown')) {
+    modal.classList.remove('hidden');
+  }
 }
 
 // ── Service Worker ───────────────────────────────────────

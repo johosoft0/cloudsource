@@ -3,7 +3,7 @@
 // Caches app shell for offline/PWA install
 // ============================================================
 
-const CACHE_NAME = 'cloudsource-v4';
+const CACHE_NAME = 'cloudsource-v5';
 
 const SHELL_FILES = [
   '/',

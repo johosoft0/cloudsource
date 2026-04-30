@@ -539,6 +539,20 @@ input, textarea {
   font-size: 14px;
 }
 
+.btn-danger {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--accent-danger);
+  color: var(--accent-danger);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.btn-danger:active {
+  background: rgba(239, 68, 68, 0.25);
+}
+
 /* ── Report Detail ── */
 #detail-photo {
   width: 100%;

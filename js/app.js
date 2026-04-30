@@ -109,7 +109,7 @@ async function startApp() {
 
   initReportForm(onReportSubmitted);
   initTimeline();
-  initDetail();
+  initDetail(() => loadReports());
   await initAuth();
 
   setMarkerTapHandler((report) => openDetail(report));
@@ -123,6 +123,13 @@ async function startApp() {
   await loadReports();
   subscribeToReports(onRealtimeReport);
   await initRadar(leafletMap);
+
+  // Reload reports when user pans/zooms the map
+  let moveTimer = null;
+  leafletMap.on('moveend', () => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => loadReports(), 500);
+  });
 
   // Help modal
   initHelp();
@@ -149,8 +156,9 @@ async function startApp() {
 
 async function loadReports() {
   try {
-    // Load wide radius so users can browse reports beyond vote range
-    reports = await getNearbyReports(userLat, userLng, VIEW_RADIUS);
+    // Calculate radius from map viewport, capped at 50 miles
+    const radius = getViewportRadius();
+    reports = await getNearbyReports(userLat, userLng, radius);
     setTimelineReports(reports);
     if (isTimelineLive()) {
       const live = reports.filter(r => {
@@ -162,6 +170,21 @@ async function loadReports() {
   } catch (err) {
     console.error('Failed to load reports:', err);
   }
+}
+
+function getViewportRadius() {
+  const map = getMap();
+  if (!map) return VIEW_RADIUS;
+  const bounds = map.getBounds();
+  const center = bounds.getCenter();
+  const ne = bounds.getNorthEast();
+  // Approximate distance from center to corner in miles
+  const dlat = ne.lat - center.lat;
+  const dlng = ne.lng - center.lng;
+  const latMi = dlat * 69; // ~69 miles per degree latitude
+  const lngMi = dlng * 69 * Math.cos(center.lat * Math.PI / 180);
+  const diag = Math.sqrt(latMi * latMi + lngMi * lngMi);
+  return Math.min(Math.max(diag, 1), VIEW_RADIUS);
 }
 
 // ── Realtime Handler ─────────────────────────────────────
@@ -216,10 +239,10 @@ function initHelp() {
 }
 
 // ── Service Worker ───────────────────────────────────────
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+// TODO: Re-enable after active development is done
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('sw.js').catch(() => {});
+// }
 
 // ── Go ───────────────────────────────────────────────────
 

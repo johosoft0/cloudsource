@@ -24,6 +24,19 @@ let reports = [];
 
 function syncPosition() {
   window._csUserPos = { lat: userLat, lng: userLng };
+  try {
+    localStorage.setItem('cs_last_lat', userLat.toString());
+    localStorage.setItem('cs_last_lng', userLng.toString());
+  } catch {}
+}
+
+function getCachedLocation() {
+  try {
+    const lat = parseFloat(localStorage.getItem('cs_last_lat'));
+    const lng = parseFloat(localStorage.getItem('cs_last_lng'));
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  } catch {}
+  return null;
 }
 
 // ── Boot ─────────────────────────────────────────────────
@@ -33,6 +46,7 @@ async function boot() {
   const geoRetry = document.getElementById('geo-retry');
   const geoStatus = document.getElementById('geo-status');
   const zipFallback = document.getElementById('geo-zip-fallback');
+  const cached = getCachedLocation();
 
   if (geoRetry) {
     geoRetry.addEventListener('click', () => requestLocation());
@@ -88,6 +102,17 @@ async function boot() {
       geoOverlay.classList.add('hidden');
       startApp();
     } catch (err) {
+      // GPS failed — use cached location if available
+      if (cached) {
+        userLat = cached.lat;
+        userLng = cached.lng;
+        syncPosition();
+        geoOverlay.classList.add('hidden');
+        showToast('Using last known location');
+        startApp();
+        return;
+      }
+      // No cache — show error + fallbacks
       if (err.code === 1) {
         geoStatus.textContent = 'Location access was denied.';
       } else if (err.code === 2) {

@@ -100,6 +100,9 @@ async function boot() {
       userLng = pos.lng;
       syncPosition();
       geoOverlay.classList.add('hidden');
+      // Hide retry banner if GPS succeeds
+      const retryBanner = document.getElementById('gps-retry-banner');
+      if (retryBanner) retryBanner.classList.add('hidden');
       startApp();
     } catch (err) {
       // GPS failed — use cached location if available
@@ -108,7 +111,8 @@ async function boot() {
         userLng = cached.lng;
         syncPosition();
         geoOverlay.classList.add('hidden');
-        showToast('Using last known location');
+        // Show persistent retry banner
+        showGpsRetryBanner();
         startApp();
         return;
       }
@@ -210,6 +214,32 @@ function getViewportRadius() {
   const lngMi = dlng * 69 * Math.cos(center.lat * Math.PI / 180);
   const diag = Math.sqrt(latMi * latMi + lngMi * lngMi);
   return Math.min(Math.max(diag, 1), VIEW_RADIUS);
+}
+
+// ── GPS Retry Banner ─────────────────────────────────────
+
+function showGpsRetryBanner() {
+  const banner = document.getElementById('gps-retry-banner');
+  if (banner) {
+    banner.classList.remove('hidden');
+    banner.onclick = async () => {
+      banner.textContent = 'Locating...';
+      try {
+        const pos = await getCurrentPosition(false);
+        userLat = pos.lat;
+        userLng = pos.lng;
+        syncPosition();
+        setUserPosition(userLat, userLng);
+        setRadiusCircle(userLat, userLng, VOTE_RADIUS);
+        updateConditionsBar(userLat, userLng);
+        loadReports();
+        banner.classList.add('hidden');
+        showToast('Location updated', 'success');
+      } catch {
+        banner.textContent = 'Using last known location. Retry GPS';
+      }
+    };
+  }
 }
 
 // ── Realtime Handler ─────────────────────────────────────

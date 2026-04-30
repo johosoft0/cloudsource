@@ -1,12 +1,13 @@
 // ============================================================
 // CloudSource — detail.js
-// Report detail popup: photo, info, voting, photo flagging
+// Report detail: photo, info, distance-gated voting, flagging
 // ============================================================
 
 import { CONDITIONS } from './config.js';
 import { submitVote, getUserVote, getPhotoUrl, reportPhoto } from './db.js';
-import { timeAgo, showToast } from './utils.js';
+import { timeAgo, distanceMiles, showToast, showXpFloat, getModMode } from './utils.js';
 
+const VOTE_RADIUS_MILES = 5;
 let currentReport = null;
 
 const condMap = {};
@@ -23,15 +24,23 @@ export function initDetail() {
 export async function openDetail(report) {
   currentReport = report;
   const modal = document.getElementById('report-detail');
+  const isMod = getModMode();
 
-  // Photo
+  // Photo — mod-aware display
   const photoEl = document.getElementById('detail-photo');
   const flagBtn = document.getElementById('btn-flag-photo');
+  const flagCount = document.getElementById('flag-count');
+  photoEl.classList.remove('photo-flagged');
 
-  if (report.photo_path) {
+  const hasPhoto = report.photo_path;
+  const isHidden = report.photo_hidden;
+
+  if (hasPhoto && (!isHidden || isMod)) {
     photoEl.src = getPhotoUrl(report.photo_path);
     photoEl.classList.remove('hidden');
+    if (isHidden && isMod) photoEl.classList.add('photo-flagged');
     flagBtn.classList.remove('hidden');
+    if (flagCount) flagCount.textContent = report.report_count ? `${report.report_count}` : '';
   } else {
     photoEl.classList.add('hidden');
     photoEl.src = '';
@@ -57,38 +66,88 @@ export async function openDetail(report) {
   document.getElementById('detail-user').innerHTML =
     `${report.display_name || 'Weather Watcher'} · Lv ${report.level || 1} ${badge}`;
 
-  // Vote counts
+  // Vote counts (reporter's self-confirm is included)
   document.getElementById('confirm-count').textContent = report.confirm_count || 0;
   document.getElementById('deny-count').textContent = report.deny_count || 0;
 
-  // Reset vote buttons
-  document.getElementById('btn-confirm').className = 'vote-btn';
-  document.getElementById('btn-deny').className = 'vote-btn';
+  // ── Voting eligibility ──
+  const confirmBtn = document.getElementById('btn-confirm');
+  const denyBtn = document.getElementById('btn-deny');
+  const voteSection = document.getElementById('detail-votes');
+  const voteMsg = document.getElementById('vote-message');
 
-  // Check existing vote
+  confirmBtn.className = 'vote-btn';
+  denyBtn.className = 'vote-btn';
+  confirmBtn.disabled = false;
+  denyBtn.disabled = false;
+  if (voteMsg) voteMsg.textContent = '';
+
+  // Check distance — can only vote within 5 miles
+  const withinRange = isWithinVoteRange(report);
+
+  // Check if user already voted
+  let alreadyVoted = false;
   if (window._csUser) {
     try {
       const existing = await getUserVote(report.id, window._csUser.id);
-      if (existing === 'confirm') document.getElementById('btn-confirm').classList.add('voted-confirm');
-      else if (existing === 'deny') document.getElementById('btn-deny').classList.add('voted-deny');
+      if (existing === 'confirm') {
+        confirmBtn.classList.add('voted-confirm');
+        alreadyVoted = true;
+      } else if (existing === 'deny') {
+        denyBtn.classList.add('voted-deny');
+        alreadyVoted = true;
+      }
     } catch { /* ignore */ }
+  }
+
+  // Disable voting if out of range, already voted, or own report
+  const isOwnReport = window._csUser && report.user_id === window._csUser.id;
+
+  if (alreadyVoted) {
+    confirmBtn.disabled = true;
+    denyBtn.disabled = true;
+    if (voteMsg) voteMsg.textContent = 'You already voted on this report';
+  } else if (isOwnReport) {
+    confirmBtn.disabled = true;
+    denyBtn.disabled = true;
+    if (voteMsg) voteMsg.textContent = 'Your report — auto-confirmed';
+  } else if (!withinRange) {
+    confirmBtn.disabled = true;
+    denyBtn.disabled = true;
+    if (voteMsg) voteMsg.textContent = 'Too far away to vote (5 mi max)';
+  } else if (!window._csUser) {
+    confirmBtn.disabled = true;
+    denyBtn.disabled = true;
+    if (voteMsg) voteMsg.textContent = 'Sign in to vote';
   }
 
   modal.classList.remove('hidden');
 }
 
-async function handleVote(voteType) {
-  if (!window._csUser) {
-    showToast('Sign in to vote', 'error');
-    return;
+function isWithinVoteRange(report) {
+  const pos = window._csUserPos;
+  if (!pos || report.distance_miles == null) {
+    // If we have lat/lng on both, compute manually
+    if (pos && report.lat && report.lng) {
+      return distanceMiles(pos.lat, pos.lng, report.lat, report.lng) <= VOTE_RADIUS_MILES;
+    }
+    return false;
   }
-  if (!currentReport) return;
+  return report.distance_miles <= VOTE_RADIUS_MILES;
+}
+
+async function handleVote(voteType) {
+  if (!window._csUser || !currentReport) return;
+
+  const confirmBtn = document.getElementById('btn-confirm');
+  const denyBtn = document.getElementById('btn-deny');
+
+  // Double-check: don't allow if already disabled
+  if (confirmBtn.disabled && denyBtn.disabled) return;
 
   try {
     await submitVote(currentReport.id, window._csUser.id, voteType);
 
-    const confirmBtn = document.getElementById('btn-confirm');
-    const denyBtn = document.getElementById('btn-deny');
     confirmBtn.className = 'vote-btn';
     denyBtn.className = 'vote-btn';
 
@@ -102,40 +161,59 @@ async function handleVote(voteType) {
         (parseInt(document.getElementById('deny-count').textContent) || 0) + 1;
     }
 
+    // Lock both buttons after voting
+    confirmBtn.disabled = true;
+    denyBtn.disabled = true;
+    const voteMsg = document.getElementById('vote-message');
+    if (voteMsg) voteMsg.textContent = 'Vote recorded';
+
     showToast(`Vote recorded: ${voteType}`, 'success');
-  } catch {
-    showToast('Failed to vote', 'error');
+    const votedBtn = voteType === 'confirm' ? confirmBtn : denyBtn;
+    showXpFloat(votedBtn, 3, 'community');
+  } catch (err) {
+    const msg = (err.message || '').includes('unique')
+      ? 'You already voted on this report'
+      : 'Failed to vote';
+    showToast(msg, 'error');
   }
 }
 
 async function handleFlagPhoto() {
-  if (!window._csUser) {
-    showToast('Sign in to report photos', 'error');
-    return;
-  }
+  if (!window._csUser) { showToast('Sign in to report photos', 'error'); return; }
   if (!currentReport) return;
 
-  // Confirm before flagging
-  if (!confirm('Report this photo as inappropriate? It will be hidden immediately.')) return;
+  const isMod = getModMode();
+  const msg = isMod
+    ? 'Submit a moderation report for this photo?'
+    : 'Report this photo as inappropriate? It will be hidden immediately.';
+  if (!confirm(msg)) return;
 
   const btn = document.getElementById('btn-flag-photo');
   btn.disabled = true;
-
   try {
     await reportPhoto(currentReport.id, window._csUser.id, 'flagged by user');
-    showToast('Photo reported and hidden', 'success');
-
-    // Hide photo in current view
-    document.getElementById('detail-photo').classList.add('hidden');
-    btn.classList.add('hidden');
+    if (isMod) {
+      // Mods: update count, keep photo visible
+      const newCount = (currentReport.report_count || 0) + 1;
+      currentReport.report_count = newCount;
+      const flagCount = document.getElementById('flag-count');
+      if (flagCount) flagCount.textContent = `${newCount}`;
+      showToast(`Photo reported (${newCount}/10 flags)`, 'success');
+      if (newCount >= 10) {
+        document.getElementById('detail-photo').classList.add('hidden');
+        btn.classList.add('hidden');
+        showToast('Photo permanently removed at 10 flags', 'success');
+      }
+    } else {
+      // Non-mods: hide photo
+      showToast('Photo reported and hidden', 'success');
+      document.getElementById('detail-photo').classList.add('hidden');
+      btn.classList.add('hidden');
+    }
   } catch (err) {
-    const msg = err.message?.includes('duplicate') || err.message?.includes('unique')
-      ? 'You already reported this photo'
-      : 'Failed to report photo';
-    showToast(msg, 'error');
-  } finally {
-    btn.disabled = false;
-  }
+    const emsg = (err.message || '').includes('unique') ? 'You already reported this photo' : 'Failed to report photo';
+    showToast(emsg, 'error');
+  } finally { btn.disabled = false; }
 }
 
 export function closeDetail() {

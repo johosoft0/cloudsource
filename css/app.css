@@ -162,38 +162,6 @@ input, textarea {
   color: var(--text-primary);
 }
 
-/* ── Radius Toggle ── */
-#radius-toggle {
-  position: fixed;
-  top: max(60px, calc(env(safe-area-inset-top, 12px) + 52px));
-  left: 16px;
-  z-index: var(--z-ui);
-  display: flex;
-  gap: 2px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 3px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-}
-
-.radius-btn {
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-}
-
-.radius-btn.active {
-  background: var(--accent);
-  color: var(--bg-base);
-  font-weight: 600;
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
 /* ── FAB ── */
 #fab-report {
   position: fixed;
@@ -635,6 +603,23 @@ input, textarea {
 .vote-count {
   opacity: 0.6;
   font-size: 12px;
+}
+
+.vote-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.vote-btn:disabled:active {
+  background: none;
+}
+
+.vote-message {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 6px;
+  min-height: 16px;
 }
 
 /* ── Auth / Profile ── */
@@ -1222,4 +1207,98 @@ input, textarea {
   padding: 2px 6px;
   border-radius: 8px;
   flex-shrink: 0;
+}
+
+/* ── XP Float Animation ── */
+.xp-float {
+  position: fixed;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  z-index: 9999;
+  animation: xpRise 1.2s ease-out forwards;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+}
+
+.xp-float-report { color: var(--accent); }
+.xp-float-community { color: var(--accent-success); }
+
+@keyframes xpRise {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) translateY(-40px) scale(1.2); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-70px) scale(0.8); }
+}
+
+/* ── Photo Flagged (mod mode) ── */
+.photo-flagged {
+  border: 3px solid var(--accent-danger) !important;
+  opacity: 0.7;
+}
+
+.flag-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-danger);
+  margin-left: 2px;
+}
+
+.flag-count:empty { display: none; }
+
+/* ── Mod Mode Toggle ── */
+.mod-section {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.mod-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.mod-toggle-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-warm);
+  cursor: pointer;
+}
+
+.mod-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mod-warning {
+  font-size: 11px;
+  color: var(--accent-warm);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ── Attributions ── */
+.attributions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.attribution-brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.attribution-list {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }

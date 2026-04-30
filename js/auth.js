@@ -5,7 +5,7 @@
 
 import { ACHIEVEMENTS, REPORTER_LEVELS, COMMUNITY_LEVELS } from './config.js';
 import { getUser, getProfile, updateProfile, signInWithEmail, signOut, onAuthChange } from './db.js';
-import { showToast } from './utils.js';
+import { showToast, getModMode, setModMode } from './utils.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -150,6 +150,20 @@ function populateGeneral() {
       </div>
     `).join('')}
   `;
+
+  // Mod toggle
+  const modToggle = document.getElementById('mod-toggle');
+  if (modToggle) {
+    modToggle.checked = getModMode();
+    modToggle.onchange = () => {
+      setModMode(modToggle.checked);
+      if (modToggle.checked) {
+        showToast('Mod mode enabled — you may see flagged photos');
+      } else {
+        showToast('Mod mode disabled');
+      }
+    };
+  }
 }
 
 // ── Reporter Tab ─────────────────────────────────────────
@@ -188,8 +202,7 @@ function populateReporter() {
       <div class="xp-row"><span>Base submission</span><span>+10</span></div>
       <div class="xp-row"><span>Attach photo</span><span>+10</span></div>
       <div class="xp-row"><span>Add note</span><span>+5</span></div>
-      <div class="xp-row"><span>Set intensity</span><span>+5</span></div>
-      <div class="xp-row total"><span>Max per report</span><span>30</span></div>
+      <div class="xp-row total"><span>Max per report</span><span>25</span></div>
     </div>
 
     <h4 style="margin-top:16px;">All Ranks</h4>

@@ -235,12 +235,31 @@ export function showToast(message, type = '') {
   setTimeout(() => toast.remove(), 3200);
 }
 
-// ── Local Storage Helpers ────────────────────────────────
+/**
+ * Show a floating XP number that rises and fades from an element.
+ * @param {HTMLElement} anchor - element to float from
+ * @param {number} amount - XP amount (e.g. 25)
+ * @param {'report'|'community'} type - blue for report, green for community
+ */
+export function showXpFloat(anchor, amount, type = 'report') {
+  const el = document.createElement('div');
+  el.className = `xp-float xp-float-${type}`;
+  el.textContent = `+${amount}`;
 
-export function getSavedRadius() {
-  return parseFloat(localStorage.getItem('cs_radius')) || 5;
+  const rect = anchor.getBoundingClientRect();
+  el.style.left = `${rect.left + rect.width / 2}px`;
+  el.style.top = `${rect.top}px`;
+
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
 }
 
-export function saveRadius(miles) {
-  localStorage.setItem('cs_radius', miles);
-      }
+// ── Local Storage Helpers ────────────────────────────────
+
+export function getModMode() {
+  return localStorage.getItem('cs_mod_mode') === 'true';
+}
+
+export function setModMode(enabled) {
+  localStorage.setItem('cs_mod_mode', enabled ? 'true' : 'false');
+}

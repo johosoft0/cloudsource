@@ -57,13 +57,6 @@
 
   <div id="map"></div>
 
-  <!-- Radius toggle -->
-  <div id="radius-toggle">
-    <button class="radius-btn" data-miles="0.5">½ mi</button>
-    <button class="radius-btn active" data-miles="5">5 mi</button>
-    <button class="radius-btn" data-miles="10">10 mi</button>
-  </div>
-
   <!-- Radar toggle -->
   <button id="btn-radar" class="radar-btn" aria-label="Toggle radar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -150,7 +143,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
           </svg>
-          <span>Report</span>
+          <span>Report</span><span id="flag-count" class="flag-count"></span>
         </button>
       </div>
       <div id="detail-body">
@@ -169,6 +162,7 @@
           <span>Deny</span> <span id="deny-count" class="vote-count">0</span>
         </button>
       </div>
+      <div id="vote-message" class="vote-message"></div>
       <button id="btn-close-detail" class="btn-secondary" style="width:100%;margin-top:8px;">Close</button>
     </div>
   </div>
@@ -227,6 +221,23 @@
         <div id="tab-general" class="tab-content">
           <div id="profile-stats"></div>
           <div id="profile-achievements"></div>
+
+          <!-- Mod mode -->
+          <div class="mod-section">
+            <label class="mod-toggle-row">
+              <input type="checkbox" id="mod-toggle">
+              <span class="mod-label">Mod Mode</span>
+            </label>
+            <p class="mod-warning">Shows reported photos for review. You may see offensive content.</p>
+          </div>
+
+          <!-- Attributions -->
+          <div class="attributions">
+            <div class="attribution-brand">Built by Joho Software</div>
+            <div class="attribution-list">
+              Map © OpenStreetMap contributors · Weather: Open-Meteo · Radar: Iowa State Mesonet / NEXRAD · Backend: Supabase
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Reporter -->

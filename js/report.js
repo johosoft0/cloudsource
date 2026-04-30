@@ -4,8 +4,8 @@
 // ============================================================
 
 import { CONDITIONS, PHOTO_GPS_MAX_DISTANCE_MI } from './config.js';
-import { submitReport, uploadPhoto } from './db.js';
-import { resizeImage, extractExifGps, distanceMiles, fuzzLocation, getCurrentPosition, showToast } from './utils.js';
+import { submitReport, uploadPhoto, submitVote } from './db.js';
+import { resizeImage, extractExifGps, distanceMiles, fuzzLocation, getCurrentPosition, showToast, showXpFloat } from './utils.js';
 
 let selectedCondition = null;
 let photoBlob = null;
@@ -149,6 +149,18 @@ async function handleSubmit() {
     });
 
     showToast('Report submitted!', 'success');
+
+    // Calculate and show XP earned
+    let xpEarned = 10; // base
+    if (photoBlob) xpEarned += 10;
+    if (document.getElementById('report-note').value.trim()) xpEarned += 5;
+    showXpFloat(btn, xpEarned, 'report');
+
+    // Auto-confirm: reporter's own vote counts as their one vote
+    try {
+      await submitVote(report.id, window._csUser.id, 'confirm');
+    } catch { /* non-critical */ }
+
     closeReportModal();
     if (submitCallback) submitCallback(report);
   } catch (err) {
@@ -191,4 +203,4 @@ function resetForm() {
   document.getElementById('btn-submit').disabled = false;
   document.getElementById('btn-submit').textContent = 'Submit Report';
   updateGpsIndicator(false);
-  }
+}

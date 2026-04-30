@@ -962,6 +962,30 @@ input, textarea {
   color: var(--accent);
 }
 
+/* ── GPS Retry Banner ── */
+.gps-retry-banner {
+  position: fixed;
+  top: max(90px, calc(env(safe-area-inset-top, 12px) + 82px));
+  right: 16px;
+  z-index: var(--z-ui);
+  padding: 8px 14px;
+  background: rgba(245, 158, 11, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--accent-warm);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-warm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gps-retry-banner:active {
+  background: rgba(245, 158, 11, 0.3);
+}
+
 /* ── Profile Edit ── */
 .profile-name-row {
   display: flex;

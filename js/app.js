@@ -3,7 +3,7 @@
 // Entry point: geolocation gate, module init, data loop
 // ============================================================
 
-import { DEFAULT_RADIUS } from './config.js';
+import { DEFAULT_RADIUS, REPORT_TTL_MINUTES } from './config.js';
 import { getNearbyReports, subscribeToReports } from './db.js';
 import { getCurrentPosition, watchPosition, showToast } from './utils.js';
 import { updateConditionsBar } from './weather.js';
@@ -155,7 +155,7 @@ async function loadReports() {
     if (isTimelineLive()) {
       const live = reports.filter(r => {
         const age = (Date.now() - new Date(r.created_at).getTime()) / 60000;
-        return age <= 120;
+        return age <= REPORT_TTL_MINUTES;
       });
       renderReports(live);
     }

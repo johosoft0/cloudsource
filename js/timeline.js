@@ -4,6 +4,7 @@
 // ============================================================
 
 import { formatTime } from './utils.js';
+import { REPORT_TTL_MINUTES } from './config.js';
 import { renderReports } from './map.js';
 
 let allReports = [];
@@ -27,7 +28,7 @@ export function initTimeline(onChange) {
       summary.textContent = 'Now — live reports';
       renderReports(allReports.filter(r => {
         const age = (Date.now() - new Date(r.created_at).getTime()) / 60000;
-        return age <= 120;
+        return age <= REPORT_TTL_MINUTES;
       }));
     } else {
       const targetTime = new Date(Date.now() - minutesAgo * 60000);

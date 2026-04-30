@@ -5,7 +5,7 @@
 
 import { DEFAULT_RADIUS } from './config.js';
 import { getNearbyReports, subscribeToReports } from './db.js';
-import { getCurrentPosition, watchPosition, getSavedRadius, saveRadius, showToast } from './utils.js';
+import { getCurrentPosition, watchPosition, showToast } from './utils.js';
 import { updateConditionsBar } from './weather.js';
 import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderReports, addReportMarker, refreshMarkerStyles, getMap } from './map.js';
 import { initReportForm, openReportModal } from './report.js';
@@ -18,7 +18,8 @@ import { initRadar, refreshRadar } from './radar.js';
 
 let userLat = null;
 let userLng = null;
-let currentRadius = getSavedRadius() || DEFAULT_RADIUS;
+const VOTE_RADIUS = 5;    // fixed 5-mile voting radius
+const VIEW_RADIUS = 50;   // load reports within 50 miles for map browsing
 let reports = [];
 
 function syncPosition() {
@@ -104,56 +105,40 @@ async function boot() {
 }
 
 async function startApp() {
-  // 2. Init map at user's actual location
   const leafletMap = initMap(userLat, userLng);
 
-  // 3. Init UI modules
   initReportForm(onReportSubmitted);
   initTimeline();
   initDetail();
-
-  // 4. Init auth
   await initAuth();
 
-  // 5. Event handlers
   setMarkerTapHandler((report) => openDetail(report));
   document.getElementById('fab-report').addEventListener('click', openReportModal);
-  initRadiusToggle();
 
-  // 6. Set map position + radius
+  // Set position + voting radius circle (visual indicator only)
   setUserPosition(userLat, userLng);
-  setRadiusCircle(userLat, userLng, currentRadius);
+  setRadiusCircle(userLat, userLng, VOTE_RADIUS);
 
-  // 7. Baseline weather
   updateConditionsBar(userLat, userLng);
-
-  // 8. Load reports
   await loadReports();
-
-  // 9. Realtime
   subscribeToReports(onRealtimeReport);
-
-  // 10. Radar overlay
   await initRadar(leafletMap);
 
-  // 11. Watch position
+  // Watch position updates
   watchPosition((pos) => {
     userLat = pos.lat;
     userLng = pos.lng;
     syncPosition();
     setUserPosition(userLat, userLng);
-    setRadiusCircle(userLat, userLng, currentRadius);
+    setRadiusCircle(userLat, userLng, VOTE_RADIUS);
   });
 
-  // 12. Periodic refresh
+  // Periodic refresh
   setInterval(() => refreshMarkerStyles(reports), 60000);
-
   setInterval(async () => {
     await loadReports();
     updateConditionsBar(userLat, userLng);
   }, 120000);
-
-  // Refresh radar every 5 minutes
   setInterval(() => refreshRadar(), 300000);
 }
 
@@ -161,7 +146,8 @@ async function startApp() {
 
 async function loadReports() {
   try {
-    reports = await getNearbyReports(userLat, userLng, currentRadius);
+    // Load wide radius so users can browse reports beyond vote range
+    reports = await getNearbyReports(userLat, userLng, VIEW_RADIUS);
     setTimelineReports(reports);
     if (isTimelineLive()) {
       const live = reports.filter(r => {
@@ -197,24 +183,6 @@ function onRealtimeReport(newReport) {
 async function onReportSubmitted() {
   await loadReports();
   refreshProfile();
-}
-
-// ── Radius Toggle ────────────────────────────────────────
-
-function initRadiusToggle() {
-  const buttons = document.querySelectorAll('.radius-btn');
-  buttons.forEach(btn => {
-    const miles = parseFloat(btn.dataset.miles);
-    btn.classList.toggle('active', miles === currentRadius);
-    btn.addEventListener('click', () => {
-      currentRadius = miles;
-      saveRadius(miles);
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      setRadiusCircle(userLat, userLng, currentRadius);
-      loadReports();
-    });
-  });
 }
 
 // ── Service Worker ───────────────────────────────────────

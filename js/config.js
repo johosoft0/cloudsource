@@ -23,7 +23,6 @@ export const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-map
 export const XP_REPORT_BASE = 10;
 export const XP_PHOTO_BONUS = 10;
 export const XP_NOTE_BONUS = 5;
-export const XP_INTENSITY_BONUS = 5;
 export const XP_VOTE = 3;
 
 // Reporter levels — 100 XP per level, 10 levels

@@ -583,15 +583,6 @@ input, textarea {
 
 #detail-note:empty { display: none; }
 
-#detail-user {
-  font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
 .user-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -700,17 +691,6 @@ input, textarea {
 }
 
 #profile-level-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #818cf8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 22px;
-  color: white;
   flex-shrink: 0;
 }
 
@@ -1345,7 +1325,8 @@ input, textarea {
 }
 
 /* ── Attributions ── */
-.attributions {
+.attributions,
+.help-attributions {
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
@@ -1404,4 +1385,92 @@ input, textarea {
   font-size: 12px;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* ── Avatar Badge ── */
+.avatar-badge {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: white;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-rank-icon {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Small avatar in detail view */
+#detail-user {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+#detail-user .avatar-badge {
+  flex-shrink: 0;
+}
+
+/* ── Daily Challenges ── */
+#daily-challenges {
+  margin-bottom: 14px;
+}
+
+#daily-challenges h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.challenge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.challenge-row.challenge-done {
+  opacity: 0.5;
+  border-color: var(--accent-success);
+}
+
+.challenge-text {
+  font-size: 13px;
+  flex: 1;
+}
+
+.challenge-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.challenge-done .challenge-status {
+  color: var(--accent-success);
+}
+
+.challenge-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 6px;
 }

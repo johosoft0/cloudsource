@@ -11,28 +11,24 @@
   <link rel="icon" href="assets/icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   <title>CloudSource</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Anybody:wght@600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 
-  <!-- Geolocation Required Overlay -->
+  <!-- Geolocation Overlay -->
   <div id="geo-overlay" class="geo-overlay">
     <div class="geo-content">
       <span class="geo-icon">📍</span>
       <h2>Location Required</h2>
       <p id="geo-status">CloudSource needs your location to show nearby weather reports.</p>
       <button id="geo-retry" class="btn-primary hidden" style="margin-top:12px;">Try Again</button>
-      <!-- TODO: REMOVE BEFORE PRODUCTION — zip code fallback for testing only -->
+      <!-- TODO: REMOVE BEFORE PRODUCTION -->
       <div id="geo-zip-fallback" class="geo-zip hidden">
         <p class="geo-zip-label">Or enter a zip code for testing:</p>
         <div class="geo-zip-row">
@@ -66,7 +62,7 @@
     <span>Radar</span>
   </button>
 
-  <!-- GPS retry banner (shown when using cached location) -->
+  <!-- GPS retry banner -->
   <button id="gps-retry-banner" class="gps-retry-banner hidden">Using last known location. Retry GPS</button>
 
   <!-- FAB -->
@@ -99,15 +95,12 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- Report Submission Modal                            -->
-  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Report Submission Modal -->
   <div id="report-modal" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet">
       <div class="modal-handle"></div>
       <h2>Report Conditions</h2>
-
       <div id="photo-section">
         <button id="btn-camera" type="button">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -120,19 +113,15 @@
         <img id="photo-preview" class="hidden" alt="Preview">
         <div id="photo-gps-indicator" class="photo-gps hidden"></div>
       </div>
-
       <label class="field-label">Condition</label>
       <div id="condition-grid"></div>
-
       <label class="field-label">Intensity</label>
       <div id="intensity-bar">
         <input type="range" id="intensity-slider" min="1" max="5" value="3">
         <div id="intensity-labels"><span>Mild</span><span>Moderate</span><span>Severe</span></div>
       </div>
-
       <label class="field-label">Note <span class="char-count">0/140</span></label>
       <textarea id="report-note" maxlength="140" placeholder="What's it like out there?"></textarea>
-
       <div class="modal-actions">
         <button id="btn-cancel" type="button" class="btn-secondary">Cancel</button>
         <button id="btn-submit" type="button" class="btn-primary">Submit Report</button>
@@ -140,9 +129,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- Report Detail Modal                                -->
-  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Report Detail Modal -->
   <div id="report-detail" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet modal-sheet-sm">
@@ -178,15 +165,12 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- Profile / Auth Modal                               -->
-  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- Profile / Auth Modal -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-backdrop"></div>
     <div class="modal-sheet">
       <div class="modal-handle"></div>
-
-      <!-- Auth view (logged out) -->
+      <!-- Auth view -->
       <div id="auth-view">
         <h2>Join CloudSource</h2>
         <p class="auth-subtitle">Sign in to submit reports and build your reputation.</p>
@@ -194,11 +178,8 @@
         <button id="btn-send-magic" class="btn-primary" style="width:100%">Send Magic Link</button>
         <p id="auth-status" class="auth-status"></p>
       </div>
-
-      <!-- Profile view (logged in) -->
+      <!-- Profile view -->
       <div id="profile-view" class="hidden">
-
-        <!-- Header -->
         <div id="profile-header">
           <div id="profile-level-badge"></div>
           <div id="profile-info">
@@ -213,27 +194,21 @@
             <p id="profile-rep"></p>
           </div>
         </div>
-
-        <!-- Inline name edit (hidden by default) -->
         <div id="name-edit-row" class="name-edit-row hidden">
           <input id="edit-name-input" type="text" maxlength="20" placeholder="New display name">
           <button id="btn-save-name" class="btn-primary btn-sm">Save</button>
           <button id="btn-cancel-edit" class="btn-secondary btn-sm">Cancel</button>
         </div>
-
-        <!-- Tabs -->
         <div class="profile-tabs">
           <button class="tab-btn active" data-tab="general">Profile</button>
           <button class="tab-btn" data-tab="reporter">Reporter</button>
           <button class="tab-btn" data-tab="community">Community</button>
         </div>
-
         <!-- Tab: General -->
         <div id="tab-general" class="tab-content">
           <div id="profile-stats"></div>
+          <div id="daily-challenges"></div>
           <div id="profile-achievements"></div>
-
-          <!-- Mod mode -->
           <div class="mod-section">
             <label class="mod-toggle-row">
               <input type="checkbox" id="mod-toggle">
@@ -241,30 +216,17 @@
             </label>
             <p class="mod-warning">Shows reported photos for review. You may see offensive content.</p>
           </div>
-
-          <!-- Attributions -->
-          <div class="attributions">
-            <div class="attribution-brand">Built by Joho Software</div>
-            <div class="attribution-list">
-              Map © OpenStreetMap contributors · Weather: Open-Meteo · Radar: Iowa State Mesonet / NEXRAD · Backend: Supabase
-            </div>
-          </div>
         </div>
-
         <!-- Tab: Reporter -->
         <div id="tab-reporter" class="tab-content hidden">
           <div id="reporter-content"></div>
         </div>
-
         <!-- Tab: Community -->
         <div id="tab-community" class="tab-content hidden">
           <div id="community-content"></div>
         </div>
-
         <button id="btn-signout" class="btn-secondary" style="width:100%;margin-top:16px;">Sign Out</button>
       </div>
-
-      <!-- Always visible close -->
       <button id="btn-close-profile" class="btn-secondary" style="width:100%;margin-top:8px;">Close</button>
     </div>
   </div>
@@ -276,41 +238,15 @@
       <div class="modal-handle"></div>
       <h2>Welcome to CloudSource</h2>
       <div class="help-content">
-        <div class="help-item">
-          <span class="help-icon">📍</span>
-          <div>
-            <strong>Report what you see</strong>
-            <p>Tap the + button to submit a weather report from your location. Add a photo, pick the condition, and describe what's happening.</p>
-          </div>
-        </div>
-        <div class="help-item">
-          <span class="help-icon">🗺️</span>
-          <div>
-            <strong>See what's nearby</strong>
-            <p>The map shows reports from people around you. Tap any marker to see details, photos, and how far away it is.</p>
-          </div>
-        </div>
-        <div class="help-item">
-          <span class="help-icon">✅</span>
-          <div>
-            <strong>Confirm or deny</strong>
-            <p>Vote on reports within 5 miles of you. Your votes help others know which reports are accurate.</p>
-          </div>
-        </div>
-        <div class="help-item">
-          <span class="help-icon">⬆️</span>
-          <div>
-            <strong>Level up</strong>
-            <p>Earn Reporter XP by submitting detailed reports (photos and notes are worth more). Earn Community XP by voting. Check your profile to see your rank and achievements.</p>
-          </div>
-        </div>
-        <div class="help-item">
-          <span class="help-icon">🕐</span>
-          <div>
-            <strong>Time scrub</strong>
-            <p>Use the slider at the bottom to see how conditions changed over the last 2 hours.</p>
-          </div>
-        </div>
+        <div class="help-item"><span class="help-icon">📍</span><div><strong>Report what you see</strong><p>Tap the + button to submit a weather report from your location. Add a photo, pick the condition, and describe what's happening.</p></div></div>
+        <div class="help-item"><span class="help-icon">🗺️</span><div><strong>See what's nearby</strong><p>The map shows reports from people around you. Tap any marker to see details, photos, and how far away it is.</p></div></div>
+        <div class="help-item"><span class="help-icon">✅</span><div><strong>Confirm or deny</strong><p>Vote on reports within 5 miles of you. Your votes help others know which reports are accurate.</p></div></div>
+        <div class="help-item"><span class="help-icon">⬆️</span><div><strong>Level up</strong><p>Earn Reporter XP by submitting detailed reports (photos and notes are worth more). Earn Community XP by voting. Check your profile to see your rank and achievements.</p></div></div>
+        <div class="help-item"><span class="help-icon">🕐</span><div><strong>Time scrub</strong><p>Use the slider at the bottom to see how conditions changed over the last 6 hours.</p></div></div>
+      </div>
+      <div class="help-attributions">
+        <div class="attribution-brand">Built by Joe Collins</div>
+        <div class="attribution-list">Map data © OpenStreetMap contributors · Weather data by Open-Meteo · Radar imagery by Iowa State Mesonet / NEXRAD</div>
       </div>
       <p class="help-hint">You can find this again by tapping the <strong>?</strong> button.</p>
       <button id="btn-close-help" class="btn-primary" style="width:100%;margin-top:12px;">Got it</button>
@@ -320,4 +256,4 @@
   <div id="toast-container"></div>
   <script type="module" src="js/app.js"></script>
 </body>
-  </html>
+</html>

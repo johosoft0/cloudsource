@@ -40,7 +40,7 @@ export function initMap(lat, lng, containerId = 'map') {
   return map;
 }
 
-export function setUserPosition(lat, lng) {
+export function setUserPosition(lat, lng, centerMap = false) {
   if (userMarker) {
     userMarker.setLatLng([lat, lng]);
   } else {
@@ -56,7 +56,7 @@ export function setUserPosition(lat, lng) {
     });
     userMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(map);
   }
-  map.setView([lat, lng], map.getZoom());
+  if (centerMap) map.setView([lat, lng], map.getZoom());
 }
 
 export function setRadiusCircle(lat, lng, miles) {

@@ -24,6 +24,19 @@ let reports = [];
 
 function syncPosition() {
   window._csUserPos = { lat: userLat, lng: userLng };
+  try {
+    localStorage.setItem('cs_last_lat', userLat.toString());
+    localStorage.setItem('cs_last_lng', userLng.toString());
+  } catch {}
+}
+
+function getCachedLocation() {
+  try {
+    const lat = parseFloat(localStorage.getItem('cs_last_lat'));
+    const lng = parseFloat(localStorage.getItem('cs_last_lng'));
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  } catch {}
+  return null;
 }
 
 // ── Boot ─────────────────────────────────────────────────
@@ -33,6 +46,7 @@ async function boot() {
   const geoRetry = document.getElementById('geo-retry');
   const geoStatus = document.getElementById('geo-status');
   const zipFallback = document.getElementById('geo-zip-fallback');
+  const cached = getCachedLocation();
 
   if (geoRetry) {
     geoRetry.addEventListener('click', () => requestLocation());
@@ -86,8 +100,23 @@ async function boot() {
       userLng = pos.lng;
       syncPosition();
       geoOverlay.classList.add('hidden');
+      // Hide retry banner if GPS succeeds
+      const retryBanner = document.getElementById('gps-retry-banner');
+      if (retryBanner) retryBanner.classList.add('hidden');
       startApp();
     } catch (err) {
+      // GPS failed — use cached location if available
+      if (cached) {
+        userLat = cached.lat;
+        userLng = cached.lng;
+        syncPosition();
+        geoOverlay.classList.add('hidden');
+        // Show persistent retry banner
+        showGpsRetryBanner();
+        startApp();
+        return;
+      }
+      // No cache — show error + fallbacks
       if (err.code === 1) {
         geoStatus.textContent = 'Location access was denied.';
       } else if (err.code === 2) {
@@ -109,7 +138,7 @@ async function startApp() {
 
   initReportForm(onReportSubmitted);
   initTimeline();
-  initDetail();
+  initDetail(() => loadReports());
   await initAuth();
 
   setMarkerTapHandler((report) => openDetail(report));
@@ -123,6 +152,13 @@ async function startApp() {
   await loadReports();
   subscribeToReports(onRealtimeReport);
   await initRadar(leafletMap);
+
+  // Reload reports when user pans/zooms the map
+  let moveTimer = null;
+  leafletMap.on('moveend', () => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => loadReports(), 500);
+  });
 
   // Help modal
   initHelp();
@@ -149,8 +185,9 @@ async function startApp() {
 
 async function loadReports() {
   try {
-    // Load wide radius so users can browse reports beyond vote range
-    reports = await getNearbyReports(userLat, userLng, VIEW_RADIUS);
+    // Calculate radius from map viewport, capped at 50 miles
+    const radius = getViewportRadius();
+    reports = await getNearbyReports(userLat, userLng, radius);
     setTimelineReports(reports);
     if (isTimelineLive()) {
       const live = reports.filter(r => {
@@ -161,6 +198,47 @@ async function loadReports() {
     }
   } catch (err) {
     console.error('Failed to load reports:', err);
+  }
+}
+
+function getViewportRadius() {
+  const map = getMap();
+  if (!map) return VIEW_RADIUS;
+  const bounds = map.getBounds();
+  const center = bounds.getCenter();
+  const ne = bounds.getNorthEast();
+  // Approximate distance from center to corner in miles
+  const dlat = ne.lat - center.lat;
+  const dlng = ne.lng - center.lng;
+  const latMi = dlat * 69; // ~69 miles per degree latitude
+  const lngMi = dlng * 69 * Math.cos(center.lat * Math.PI / 180);
+  const diag = Math.sqrt(latMi * latMi + lngMi * lngMi);
+  return Math.min(Math.max(diag, 1), VIEW_RADIUS);
+}
+
+// ── GPS Retry Banner ─────────────────────────────────────
+
+function showGpsRetryBanner() {
+  const banner = document.getElementById('gps-retry-banner');
+  if (banner) {
+    banner.classList.remove('hidden');
+    banner.onclick = async () => {
+      banner.textContent = 'Locating...';
+      try {
+        const pos = await getCurrentPosition(false);
+        userLat = pos.lat;
+        userLng = pos.lng;
+        syncPosition();
+        setUserPosition(userLat, userLng);
+        setRadiusCircle(userLat, userLng, VOTE_RADIUS);
+        updateConditionsBar(userLat, userLng);
+        loadReports();
+        banner.classList.add('hidden');
+        showToast('Location updated', 'success');
+      } catch {
+        banner.textContent = 'Using last known location. Retry GPS';
+      }
+    };
   }
 }
 
@@ -216,10 +294,10 @@ function initHelp() {
 }
 
 // ── Service Worker ───────────────────────────────────────
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+// TODO: Re-enable after active development is done
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('sw.js').catch(() => {});
+// }
 
 // ── Go ───────────────────────────────────────────────────
 

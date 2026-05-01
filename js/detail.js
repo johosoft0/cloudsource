@@ -4,22 +4,25 @@
 // ============================================================
 
 import { CONDITIONS } from './config.js';
-import { submitVote, getUserVote, getPhotoUrl, reportPhoto } from './db.js';
+import { submitVote, getUserVote, getPhotoUrl, reportPhoto, deleteReport } from './db.js';
 import { timeAgo, distanceMiles, showToast, showXpFloat, getModMode } from './utils.js';
 import { refreshProfile, checkAchievements } from './auth.js';
 
 const VOTE_RADIUS_MILES = 5;
 let currentReport = null;
+let onReportDeleted = null;
 
 const condMap = {};
 CONDITIONS.forEach(c => { condMap[c.key] = c; });
 
-export function initDetail() {
+export function initDetail(deleteCallback) {
+  onReportDeleted = deleteCallback;
   document.getElementById('btn-confirm').addEventListener('click', () => handleVote('confirm'));
   document.getElementById('btn-deny').addEventListener('click', () => handleVote('deny'));
   document.getElementById('btn-close-detail').addEventListener('click', closeDetail);
   document.querySelector('#report-detail .modal-backdrop').addEventListener('click', closeDetail);
   document.getElementById('btn-flag-photo').addEventListener('click', handleFlagPhoto);
+  document.getElementById('btn-delete-report').addEventListener('click', handleDelete);
 }
 
 export async function openDetail(report) {
@@ -122,6 +125,11 @@ export async function openDetail(report) {
     if (voteMsg) voteMsg.textContent = 'Sign in to vote';
   }
 
+  // Show delete button only if this is the user's own report
+  const deleteBtn = document.getElementById('btn-delete-report');
+  const isOwner = window._csUser && report.user_id === window._csUser.id;
+  deleteBtn.classList.toggle('hidden', !isOwner);
+
   modal.classList.remove('hidden');
 }
 
@@ -219,6 +227,28 @@ async function handleFlagPhoto() {
     const emsg = (err.message || '').includes('unique') ? 'You already reported this photo' : 'Failed to report photo';
     showToast(emsg, 'error');
   } finally { btn.disabled = false; }
+}
+
+async function handleDelete() {
+  if (!window._csUser || !currentReport) return;
+  if (currentReport.user_id !== window._csUser.id) return;
+  if (!confirm('Delete this report? This cannot be undone.')) return;
+
+  const btn = document.getElementById('btn-delete-report');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
+  try {
+    await deleteReport(currentReport.id);
+    showToast('Report deleted', 'success');
+    closeDetail();
+    if (onReportDeleted) onReportDeleted();
+  } catch (err) {
+    showToast('Failed to delete report', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Delete My Report';
+  }
 }
 
 export function closeDetail() {

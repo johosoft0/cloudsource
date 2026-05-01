@@ -539,6 +539,20 @@ input, textarea {
   font-size: 14px;
 }
 
+.btn-danger {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--accent-danger);
+  color: var(--accent-danger);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.btn-danger:active {
+  background: rgba(239, 68, 68, 0.25);
+}
+
 /* ── Report Detail ── */
 #detail-photo {
   width: 100%;
@@ -946,6 +960,30 @@ input, textarea {
   background: rgba(56, 189, 248, 0.15);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* ── GPS Retry Banner ── */
+.gps-retry-banner {
+  position: fixed;
+  top: max(90px, calc(env(safe-area-inset-top, 12px) + 82px));
+  right: 16px;
+  z-index: var(--z-ui);
+  padding: 8px 14px;
+  background: rgba(245, 158, 11, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--accent-warm);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-warm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gps-retry-banner:active {
+  background: rgba(245, 158, 11, 0.3);
 }
 
 /* ── Profile Edit ── */

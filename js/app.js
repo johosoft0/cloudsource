@@ -4,7 +4,7 @@
 
 import { DEFAULT_RADIUS, REPORT_TTL_MINUTES } from './config.js';
 import { getNearbyReports, subscribeToReports } from './db.js';
-import { getCurrentPosition, watchPosition, showToast } from './utils.js';
+import { getCurrentPosition, watchPosition, showToast, fuzzLocation } from './utils.js';
 import { updateConditionsBar } from './weather.js';
 import { initMap, setUserPosition, setRadiusCircle, setMarkerTapHandler, renderReports, addReportMarker, refreshMarkerStyles, getMap } from './map.js';
 import { initReportForm, openReportModal } from './report.js';
@@ -21,9 +21,11 @@ let reports = [];
 
 function syncPosition() {
   window._csUserPos = { lat: userLat, lng: userLng };
+  // Cache a fuzzed version — never store precise GPS on disk
   try {
-    localStorage.setItem('cs_last_lat', userLat.toString());
-    localStorage.setItem('cs_last_lng', userLng.toString());
+    const fuzzed = fuzzLocation(userLat, userLng);
+    localStorage.setItem('cs_last_lat', fuzzed.lat.toString());
+    localStorage.setItem('cs_last_lng', fuzzed.lng.toString());
   } catch {}
 }
 

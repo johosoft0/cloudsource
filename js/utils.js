@@ -208,6 +208,12 @@ export function showToast(message, type = '') {
   setTimeout(() => toast.remove(), 3200);
 }
 
+export function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 export function showXpFloat(anchor, amount, type = 'report') {
   const el = document.createElement('div');
   el.className = `xp-float xp-float-${type}`;

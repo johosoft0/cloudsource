@@ -1,11 +1,11 @@
 // ============================================================
 // CloudSource — auth.js
-// Auth, tabbed profile (General / Reporter / Community)
 // ============================================================
 
-import { ACHIEVEMENTS, REPORTER_LEVELS, COMMUNITY_LEVELS } from './config.js';
+import { ACHIEVEMENTS, REPORTER_LEVELS, COMMUNITY_LEVELS, XP_CHALLENGE_REPORT, XP_CHALLENGE_COMMUNITY } from './config.js';
 import { getUser, getProfile, updateProfile, signInWithEmail, signOut, onAuthChange } from './db.js';
-import { showToast, getModMode, setModMode } from './utils.js';
+import { showToast, getModMode, setModMode, getReporterLevel, getCommunityLevel, renderAvatar,
+  getTodaysChallenges, getChallengeProgress, updateChallengeProgress, isChallengeComplete } from './utils.js';
 
 let currentUser = null;
 let currentProfile = null;
@@ -13,19 +13,12 @@ let currentProfile = null;
 // ── Init ─────────────────────────────────────────────────
 
 export async function initAuth() {
-  // Auth form
   document.getElementById('btn-send-magic').addEventListener('click', handleMagicLink);
-  document.getElementById('auth-email').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleMagicLink();
-  });
-
-  // Profile actions
+  document.getElementById('auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') handleMagicLink(); });
   document.getElementById('btn-signout').addEventListener('click', handleSignOut);
   document.getElementById('btn-profile').addEventListener('click', openProfileModal);
   document.getElementById('btn-close-profile').addEventListener('click', closeProfileModal);
   document.querySelector('#profile-modal .modal-backdrop').addEventListener('click', closeProfileModal);
-
-  // Name editing
   document.getElementById('btn-edit-name').addEventListener('click', () => {
     const row = document.getElementById('name-edit-row');
     const input = document.getElementById('edit-name-input');
@@ -36,13 +29,10 @@ export async function initAuth() {
   });
   document.getElementById('btn-save-name').addEventListener('click', saveName);
   document.getElementById('btn-cancel-edit').addEventListener('click', cancelEdit);
-
-  // Tab switching
   document.querySelectorAll('#profile-view .tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // Auth state listener
   onAuthChange(async (user) => {
     currentUser = user;
     window._csUser = user;
@@ -55,13 +45,13 @@ export async function initAuth() {
     }
   });
 
-  // Initial session
   const user = await getUser();
   currentUser = user;
   window._csUser = user;
   if (user) {
     try { currentProfile = await getProfile(user.id); } catch { currentProfile = null; }
     switchToProfileView();
+    updateProfileButton();
   } else {
     switchToAuthView();
   }
@@ -85,9 +75,8 @@ function switchToProfileView() {
   populateReporter();
   populateCommunity();
   switchTab('general');
+  updateProfileButton();
 }
-
-// ── Tab Switching ────────────────────────────────────────
 
 function switchTab(tabId) {
   document.querySelectorAll('#profile-view .tab-btn').forEach(btn => {
@@ -98,43 +87,49 @@ function switchTab(tabId) {
   });
 }
 
+// ── Profile Button Avatar ────────────────────────────────
+
+function updateProfileButton() {
+  const btn = document.getElementById('btn-profile');
+  if (currentProfile) {
+    const lv = getReporterLevel(currentProfile.xp_report || 0);
+    btn.innerHTML = `<span style="font-size:20px;">${lv.badge}</span>`;
+    btn.title = lv.title;
+  } else {
+    btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>`;
+  }
+}
+
 // ── General Tab ──────────────────────────────────────────
 
 function populateGeneral() {
   const p = currentProfile;
   const fallback = currentUser?.email?.split('@')[0] || 'Weather Watcher';
-
-  // Header
   const rLv = getReporterLevel(p?.xp_report || 0);
-  document.getElementById('profile-level-badge').textContent = rLv.level;
-  document.getElementById('profile-name').textContent = p?.display_name || fallback;
+  const cLv = getCommunityLevel(p?.xp_community || 0);
 
+  // Avatar
+  document.getElementById('profile-level-badge').innerHTML = renderAvatar(p?.xp_report || 0, 56);
+
+  // Name + rep
+  document.getElementById('profile-name').textContent = p?.display_name || fallback;
   const rep = p?.reputation || 25;
   let repLabel = 'Newcomer';
   if (rep >= 75) repLabel = 'Local Expert';
   else if (rep >= 50) repLabel = 'Trusted';
   else if (rep >= 25) repLabel = 'Active';
-  document.getElementById('profile-rep').textContent = `${repLabel} · ${rep.toFixed(1)} rep`;
+  document.getElementById('profile-rep').textContent = `${rLv.title} · ${rep.toFixed(1)} rep`;
 
   // Stats
   document.getElementById('profile-stats').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-value">${p?.total_reports || 0}</div>
-      <div class="stat-label">Reports</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">${p?.streak_days || 0}</div>
-      <div class="stat-label">Day Streak</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">${rLv.level}</div>
-      <div class="stat-label">Reporter Lv</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">${getCommunityLevel(p?.xp_community || 0).level}</div>
-      <div class="stat-label">Community Lv</div>
-    </div>
+    <div class="stat-card"><div class="stat-value">${p?.total_reports || 0}</div><div class="stat-label">Reports</div></div>
+    <div class="stat-card"><div class="stat-value">${p?.streak_days || 0}</div><div class="stat-label">Day Streak</div></div>
+    <div class="stat-card"><div class="stat-value">${rLv.level}</div><div class="stat-label">Reporter Lv</div></div>
+    <div class="stat-card"><div class="stat-value">${cLv.level}</div><div class="stat-label">Community Lv</div></div>
   `;
+
+  // Daily Challenges
+  populateChallenges();
 
   // Achievements
   const earned = p?.achievements || [];
@@ -143,10 +138,7 @@ function populateGeneral() {
     ${ACHIEVEMENTS.map(a => `
       <div class="achievement ${earned.includes(a.key) ? '' : 'locked'}">
         <span class="achievement-icon">${a.icon}</span>
-        <div>
-          <div class="achievement-name">${a.name}</div>
-          <div class="achievement-desc">${a.desc}</div>
-        </div>
+        <div><div class="achievement-name">${a.name}</div><div class="achievement-desc">${a.desc}</div></div>
       </div>
     `).join('')}
   `;
@@ -157,13 +149,31 @@ function populateGeneral() {
     modToggle.checked = getModMode();
     modToggle.onchange = () => {
       setModMode(modToggle.checked);
-      if (modToggle.checked) {
-        showToast('Mod mode enabled — you may see flagged photos');
-      } else {
-        showToast('Mod mode disabled');
-      }
+      showToast(modToggle.checked ? 'Mod mode enabled — you may see flagged photos' : 'Mod mode disabled');
     };
   }
+}
+
+// ── Daily Challenges ─────────────────────────────────────
+
+function populateChallenges() {
+  const el = document.getElementById('daily-challenges');
+  if (!el) return;
+
+  const challenges = getTodaysChallenges(currentProfile?.streak_days || 0);
+  const progress = getChallengeProgress();
+
+  el.innerHTML = `
+    <h3>Daily Challenges</h3>
+    ${challenges.map(c => {
+      const done = progress[c.id] === true;
+      return `<div class="challenge-row ${done ? 'challenge-done' : ''}">
+        <span class="challenge-text">${c.text}</span>
+        <span class="challenge-status">${done ? '✓' : `+${c.xp} XP`}</span>
+      </div>`;
+    }).join('')}
+    <div class="challenge-hint">Challenges reset daily at midnight</div>
+  `;
 }
 
 // ── Reporter Tab ─────────────────────────────────────────
@@ -173,12 +183,9 @@ function populateReporter() {
   const current = getReporterLevel(xp);
   const nextIdx = REPORTER_LEVELS.findIndex(l => l.level === current.level) + 1;
   const next = REPORTER_LEVELS[nextIdx] || null;
-  const xpInLevel = next ? xp - current.xp : 0;
-  const xpNeeded = next ? next.xp - current.xp : 1;
-  const pct = next ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100;
+  const pct = next ? Math.min(100, ((xp - current.xp) / (next.xp - current.xp)) * 100) : 100;
 
-  const el = document.getElementById('reporter-content');
-  el.innerHTML = `
+  document.getElementById('reporter-content').innerHTML = `
     <div class="level-hero">
       <span class="level-hero-badge">${current.badge}</span>
       <div class="level-hero-info">
@@ -186,17 +193,10 @@ function populateReporter() {
         <div class="level-hero-sub">Reporter Level ${current.level}</div>
       </div>
     </div>
-
     <div class="xp-bar-wrap">
-      <div class="xp-bar-track">
-        <div class="xp-bar-fill" style="width:${pct}%"></div>
-      </div>
-      <div class="xp-bar-label">
-        <span>${xp} XP</span>
-        <span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span>
-      </div>
+      <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+      <div class="xp-bar-label"><span>${xp} XP</span><span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span></div>
     </div>
-
     <div class="xp-breakdown">
       <h4>XP per report</h4>
       <div class="xp-row"><span>Base submission</span><span>+10</span></div>
@@ -204,7 +204,6 @@ function populateReporter() {
       <div class="xp-row"><span>Add note</span><span>+5</span></div>
       <div class="xp-row total"><span>Max per report</span><span>25</span></div>
     </div>
-
     <h4 style="margin-top:16px;">All Ranks</h4>
     <div class="level-list">
       ${REPORTER_LEVELS.map(l => `
@@ -228,12 +227,9 @@ function populateCommunity() {
   const current = getCommunityLevel(xp);
   const nextIdx = COMMUNITY_LEVELS.findIndex(l => l.level === current.level) + 1;
   const next = COMMUNITY_LEVELS[nextIdx] || null;
-  const xpInLevel = next ? xp - current.xp : 0;
-  const xpNeeded = next ? next.xp - current.xp : 1;
-  const pct = next ? Math.min(100, (xpInLevel / xpNeeded) * 100) : 100;
+  const pct = next ? Math.min(100, ((xp - current.xp) / (next.xp - current.xp)) * 100) : 100;
 
-  const el = document.getElementById('community-content');
-  el.innerHTML = `
+  document.getElementById('community-content').innerHTML = `
     <div class="level-hero">
       <span class="level-hero-badge">${current.badge}</span>
       <div class="level-hero-info">
@@ -241,22 +237,14 @@ function populateCommunity() {
         <div class="level-hero-sub">Community Level ${current.level}</div>
       </div>
     </div>
-
     <div class="xp-bar-wrap">
-      <div class="xp-bar-track">
-        <div class="xp-bar-fill xp-bar-community" style="width:${pct}%"></div>
-      </div>
-      <div class="xp-bar-label">
-        <span>${xp} XP</span>
-        <span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span>
-      </div>
+      <div class="xp-bar-track"><div class="xp-bar-fill xp-bar-community" style="width:${pct}%"></div></div>
+      <div class="xp-bar-label"><span>${xp} XP</span><span>${next ? `${next.xp} XP to Lv ${next.level}` : 'MAX LEVEL'}</span></div>
     </div>
-
     <div class="xp-breakdown">
       <h4>XP per action</h4>
       <div class="xp-row"><span>Confirm or deny a report</span><span>+3</span></div>
     </div>
-
     <h4 style="margin-top:16px;">All Ranks</h4>
     <div class="level-list">
       ${COMMUNITY_LEVELS.map(l => `
@@ -273,34 +261,12 @@ function populateCommunity() {
   `;
 }
 
-// ── Level Helpers ────────────────────────────────────────
-
-function getReporterLevel(xp) {
-  let result = REPORTER_LEVELS[0];
-  for (const l of REPORTER_LEVELS) {
-    if (xp >= l.xp) result = l;
-    else break;
-  }
-  return result;
-}
-
-function getCommunityLevel(xp) {
-  let result = COMMUNITY_LEVELS[0];
-  for (const l of COMMUNITY_LEVELS) {
-    if (xp >= l.xp) result = l;
-    else break;
-  }
-  return result;
-}
-
 // ── Name Editing ─────────────────────────────────────────
 
 async function saveName() {
-  const input = document.getElementById('edit-name-input');
-  const name = input.value.trim();
+  const name = document.getElementById('edit-name-input').value.trim();
   if (!name || name.length < 2) { showToast('Name must be at least 2 characters', 'error'); return; }
   if (name.length > 20) { showToast('Name must be 20 characters or less', 'error'); return; }
-
   const btn = document.getElementById('btn-save-name');
   btn.disabled = true;
   try {
@@ -309,11 +275,8 @@ async function saveName() {
     cancelEdit();
     populateGeneral();
   } catch (err) {
-    const msg = (err.message || '').includes('unique') ? 'That name is already taken' : 'Failed to update name';
-    showToast(msg, 'error');
-  } finally {
-    btn.disabled = false;
-  }
+    showToast((err.message || '').includes('unique') ? 'That name is already taken' : 'Failed to update name', 'error');
+  } finally { btn.disabled = false; }
 }
 
 function cancelEdit() {
@@ -328,48 +291,27 @@ async function handleMagicLink() {
   const status = document.getElementById('auth-status');
   const btn = document.getElementById('btn-send-magic');
   const email = emailInput.value.trim();
-  if (!email || !email.includes('@')) {
-    status.textContent = 'Enter a valid email';
-    status.className = 'auth-status error';
-    return;
-  }
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
+  if (!email || !email.includes('@')) { status.textContent = 'Enter a valid email'; status.className = 'auth-status error'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
   try {
     await signInWithEmail(email);
     status.textContent = 'Check your email for the magic link!';
     status.className = 'auth-status success';
-  } catch (err) {
-    status.textContent = err.message || 'Failed to send link';
-    status.className = 'auth-status error';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Send Magic Link';
-  }
+  } catch (err) { status.textContent = err.message || 'Failed to send link'; status.className = 'auth-status error'; }
+  finally { btn.disabled = false; btn.textContent = 'Send Magic Link'; }
 }
-
-// ── Sign Out ─────────────────────────────────────────────
 
 async function handleSignOut() {
   try {
-    await signOut();
-    currentUser = null;
-    currentProfile = null;
-    window._csUser = null;
-    switchToAuthView();
-    closeProfileModal();
-    showToast('Signed out');
+    await signOut(); currentUser = null; currentProfile = null; window._csUser = null;
+    switchToAuthView(); closeProfileModal(); updateProfileButton(); showToast('Signed out');
   } catch { showToast('Failed to sign out', 'error'); }
 }
 
 // ── Modal ────────────────────────────────────────────────
 
 export function openProfileModal() {
-  if (currentUser) {
-    switchToProfileView();
-  } else {
-    switchToAuthView();
-  }
+  if (currentUser) switchToProfileView(); else switchToAuthView();
   document.getElementById('profile-modal').classList.remove('hidden');
 }
 
@@ -388,75 +330,66 @@ export async function refreshProfile() {
     populateGeneral();
     populateReporter();
     populateCommunity();
+    updateProfileButton();
   } catch {}
 }
 
-/**
- * Check and unlock achievements based on current profile state.
- * Called after report submission and voting.
- * @param {object} opts - optional context { isNightReport: bool }
- */
+// ── Achievement Checker ──────────────────────────────────
+
 export async function checkAchievements(opts = {}) {
   if (!currentUser || !currentProfile) return;
-
   const p = currentProfile;
   const earned = Array.isArray(p.achievements) ? [...p.achievements] : [];
   const newly = [];
+  function tryUnlock(key) { if (!earned.includes(key)) { earned.push(key); newly.push(key); } }
 
-  function tryUnlock(key) {
-    if (!earned.includes(key)) {
-      earned.push(key);
-      newly.push(key);
-    }
-  }
-
-  // Report milestones
-  if (p.total_reports >= 1)   tryUnlock('first_drop');
-  if (p.total_reports >= 10)  tryUnlock('ten_reports');
-  if (p.total_reports >= 50)  tryUnlock('fifty_reports');
+  if (p.total_reports >= 1) tryUnlock('first_drop');
+  if (p.total_reports >= 10) tryUnlock('ten_reports');
+  if (p.total_reports >= 50) tryUnlock('fifty_reports');
   if (p.total_reports >= 100) tryUnlock('century');
-
-  // Streaks
-  if (p.streak_days >= 7)  tryUnlock('sunrise_streak');
+  if (p.streak_days >= 7) tryUnlock('sunrise_streak');
   if (p.streak_days >= 14) tryUnlock('fortnight');
-
-  // Reputation
   if (p.reputation >= 75) tryUnlock('local_legend');
-
-  // Night owl (passed in from report.js)
   if (opts.isNightReport) tryUnlock('night_owl');
 
-  // Votes (community XP / 3 = approximate vote count)
   const approxVotes = Math.floor((p.xp_community || 0) / 3);
-  if (approxVotes >= 1)  tryUnlock('first_vote');
+  if (approxVotes >= 1) tryUnlock('first_vote');
   if (approxVotes >= 50) tryUnlock('fifty_votes');
 
-  // Level milestones
   const rLv = getReporterLevel(p.xp_report || 0).level;
   const cLv = getCommunityLevel(p.xp_community || 0).level;
-  if (rLv >= 5)  tryUnlock('reporter_5');
+  if (rLv >= 5) tryUnlock('reporter_5');
   if (rLv >= 10) tryUnlock('reporter_10');
-  if (cLv >= 5)  tryUnlock('community_5');
+  if (cLv >= 5) tryUnlock('community_5');
   if (cLv >= 10) tryUnlock('community_10');
-
-  // Shutterbug — approximate from XP (each photo report gives +10 bonus)
-  // Not perfectly accurate but good enough without a separate counter
   if (p.total_reports >= 10 && p.xp_report >= p.total_reports * 15) tryUnlock('shutterbug');
 
-  // Save if anything new was unlocked
   if (newly.length > 0) {
     try {
       await updateProfile(currentUser.id, { achievements: earned });
       currentProfile.achievements = earned;
-
-      // Show toast for each new achievement
-      const allAch = ACHIEVEMENTS;
       for (const key of newly) {
-        const a = allAch.find(x => x.key === key);
+        const a = ACHIEVEMENTS.find(x => x.key === key);
         if (a) showToast(`${a.icon} Achievement: ${a.name}!`, 'success');
       }
-
       populateGeneral();
-    } catch { /* non-critical */ }
+    } catch {}
   }
+}
+
+// ── Daily Challenge Completion ───────────────────────────
+
+export async function tryCompleteChallenge(challengeId, xpAmount, xpField) {
+  if (isChallengeComplete(challengeId)) return;
+  updateChallengeProgress(challengeId, true);
+  if (currentUser && currentProfile) {
+    try {
+      const update = {};
+      update[xpField] = (currentProfile[xpField] || 0) + xpAmount;
+      await updateProfile(currentUser.id, update);
+      currentProfile[xpField] = update[xpField];
+      showToast(`🎯 Challenge complete! +${xpAmount} XP`, 'success');
+    } catch {}
+  }
+  populateChallenges();
 }

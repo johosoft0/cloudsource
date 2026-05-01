@@ -6,24 +6,25 @@ export const SUPABASE_URL = 'https://akhqfhihgakjlgsajppx.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFraHFmaGloZ2Framxnc2FqcHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTE5MjksImV4cCI6MjA5Mjk4NzkyOX0.eu_EXab5Z7zsRpjJvcMJMUDTyLjPdCtJFDgtIbzB50A';
 
 export const INITIAL_ZOOM = 13;
-export const RADIUS_OPTIONS = [0.5, 5, 10];
 export const DEFAULT_RADIUS = 5;
-export const REPORT_TTL_MINUTES = 360; // 6 hours on live map
+export const REPORT_TTL_MINUTES = 360;
 export const REPORT_ARCHIVE_HOURS = 24;
 export const MAX_PHOTO_WIDTH = 1200;
 export const MAX_PHOTO_QUALITY = 0.8;
 export const PHOTO_GPS_MAX_DISTANCE_MI = 1.0;
+export const REPORT_COOLDOWN_MINUTES = 60;
 
 export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 export const NWS_API_URL = 'https://api.weather.gov';
 export const NWS_USER_AGENT = 'CloudSource/1.0 (cloudsource-app)';
 export const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-maps.json';
 
-// XP constants (mirrored from SQL triggers)
 export const XP_REPORT_BASE = 10;
 export const XP_PHOTO_BONUS = 10;
 export const XP_NOTE_BONUS = 5;
 export const XP_VOTE = 3;
+export const XP_CHALLENGE_REPORT = 25;
+export const XP_CHALLENGE_COMMUNITY = 15;
 
 // Reporter levels — 20 levels
 export const REPORTER_LEVELS = [
@@ -73,7 +74,7 @@ export const COMMUNITY_LEVELS = [
   { level: 20, xp: 3750,  title: 'Voice of the Crowd',  badge: '💎' },
 ];
 
-// Condition definitions
+// Conditions
 export const CONDITIONS = [
   { key: 'clear',        icon: '☀️', label: 'Clear',       color: '#fbbf24' },
   { key: 'partly_cloudy',icon: '⛅', label: 'Partly',      color: '#a3c4e0' },
@@ -87,7 +88,7 @@ export const CONDITIONS = [
   { key: 'other',        icon: '🌀', label: 'Other',       color: '#f472b6' },
 ];
 
-// Achievement definitions — 'check' is a function(profile) => bool, evaluated client-side
+// Achievements
 export const ACHIEVEMENTS = [
   { key: 'first_drop',       icon: '💧', name: 'First Drop',      desc: 'Submit your first report' },
   { key: 'ten_reports',      icon: '🔟', name: 'Double Digits',   desc: 'Submit 10 reports' },
@@ -105,3 +106,24 @@ export const ACHIEVEMENTS = [
   { key: 'community_5',      icon: '⚔️', name: 'Guardian',        desc: 'Reach Community Level 5' },
   { key: 'community_10',     icon: '🌟', name: 'Steward',         desc: 'Reach Community Level 10' },
 ];
+
+// Daily challenge templates (rotated by day-of-year)
+export const DAILY_CHALLENGES = {
+  report: [
+    { id: 'photo_report',    text: '📸 Submit a report with a photo',           check: 'photo_report',  xp: 25 },
+    { id: 'three_conditions',text: '🌈 Report 3 different conditions today',    check: 'three_conds',   xp: 25 },
+    { id: 'early_bird',      text: '🌅 Submit a report before 8 AM',            check: 'early_bird',    xp: 25 },
+    { id: 'detailed_report', text: '📝 Submit a report with both photo and note',check: 'detailed',     xp: 25 },
+    { id: 'two_reports',     text: '✌️ Submit 2 reports today',                  check: 'two_reports',   xp: 25 },
+  ],
+  community: [
+    { id: 'five_votes',      text: '🗳️ Vote on 5 reports today',                check: 'five_votes',    xp: 15 },
+    { id: 'quick_confirm',   text: '⚡ Confirm a report posted <10 min ago',    check: 'quick_confirm', xp: 15 },
+    { id: 'nearby_vote',     text: '📍 Vote on a report within 3 miles',        check: 'nearby_vote',   xp: 15 },
+    { id: 'three_votes',     text: '👍 Vote on 3 reports today',                check: 'three_votes',   xp: 15 },
+    { id: 'confirm_streak',  text: '✅ Confirm 3 reports in a row',             check: 'confirm_three', xp: 15 },
+  ],
+  streak: [
+    { id: 'extend_streak',   text: '🔥 Extend your report streak another day',  check: 'streak_extend', xp: 25 },
+  ],
+};

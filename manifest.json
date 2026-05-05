@@ -1,8 +1,9 @@
 {
-  "name": "CloudSource",
-  "short_name": "CloudSource",
+  "name": "CloudSource Weather",
+  "short_name": "CloudSource Weather",
   "description": "Hyper-local crowd-sourced weather intelligence",
-  "start_url": "/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b1120",

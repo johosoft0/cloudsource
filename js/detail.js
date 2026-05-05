@@ -6,7 +6,7 @@ import { CONDITIONS } from './config.js';
 import { submitVote, getUserVote, getPhotoUrl, reportPhoto, deleteReport } from './db.js';
 import { timeAgo, distanceMiles, showToast, showXpFloat, getModMode, getReporterLevel,
   renderAvatarSmall, clearLastReportTime, updateChallengeProgress, getChallengeProgress,
-  getTodaysChallenges } from './utils.js';
+  getTodaysChallenges, escapeHtml } from './utils.js';
 import { refreshProfile, checkAchievements, tryCompleteChallenge } from './auth.js';
 
 const VOTE_RADIUS_MILES = 5;
@@ -67,8 +67,9 @@ export async function openDetail(report) {
   let badge = '';
   if (rep >= 75) badge = '<span class="user-badge badge-expert">Expert</span>';
   else if (rep >= 50) badge = '<span class="user-badge badge-trusted">Trusted</span>';
+  const safeName = escapeHtml(report.display_name || 'Weather Watcher');
   document.getElementById('detail-user').innerHTML =
-    `${renderAvatarSmall(report.xp_report || 0)} <span>${report.display_name || 'Weather Watcher'} · ${rLv.title} ${badge}</span>`;
+    `${renderAvatarSmall(report.xp_report || 0)} <span>${safeName} · ${rLv.title} ${badge}</span>`;
 
   // Votes
   document.getElementById('confirm-count').textContent = report.confirm_count || 0;

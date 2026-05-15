@@ -91,7 +91,6 @@ input, textarea {
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-sm) !important;
   overflow: hidden;
-  margin-top: 60px !important;
 }
 .leaflet-control-zoom a {
   background: var(--bg-surface) !important;
@@ -128,25 +127,20 @@ input, textarea {
 }
 
 .logo-icon {
-  font-size: 22px;
+  font-size: 24px;
   color: var(--accent);
   filter: drop-shadow(0 0 8px var(--accent-glow));
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  transform: translateY(-1px);
 }
 
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 18px;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--accent), #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  white-space: nowrap;
 }
 
 .top-bar-right {
@@ -171,18 +165,17 @@ input, textarea {
 /* ── FAB ── */
 #fab-report {
   position: fixed;
-  bottom: 95px;
+  bottom: 100px;
   right: 16px;
   z-index: var(--z-ui);
   width: 56px;
-  border-radius: 28px;
+  height: 56px;
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), #818cf8);
   color: white;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 0 6px;
   box-shadow: 0 4px 20px var(--accent-glow), 0 0 40px rgba(56, 189, 248, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -194,20 +187,19 @@ input, textarea {
 /* ── Profile Button ── */
 #btn-profile {
   position: fixed;
-  bottom: 95px;
+  bottom: 100px;
   left: 16px;
   z-index: var(--z-ui);
-  width: 48px;
-  border-radius: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: var(--bg-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 0 5px;
   color: var(--text-secondary);
   transition: all 0.2s ease;
 }
@@ -217,17 +209,10 @@ input, textarea {
   color: var(--accent);
 }
 
-.btn-label {
-  font-size: 9px;
-  font-weight: 600;
-  margin-top: 2px;
-  letter-spacing: 0.02em;
-}
-
 /* ── Help Button ── */
 #btn-help {
   position: fixed;
-  bottom: 160px;
+  bottom: 152px;
   left: 16px;
   z-index: var(--z-ui);
   width: 38px;
@@ -598,15 +583,6 @@ input, textarea {
 
 #detail-note:empty { display: none; }
 
-#detail-user {
-  font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
 .user-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -684,8 +660,7 @@ input, textarea {
   line-height: 1.4;
 }
 
-#auth-email,
-#auth-username {
+#auth-email {
   width: 100%;
   padding: 12px;
   border-radius: var(--radius-sm);
@@ -696,15 +671,7 @@ input, textarea {
   margin-bottom: 12px;
 }
 
-#auth-email:focus,
-#auth-username:focus { border-color: var(--border-focus); }
-
-.auth-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-  text-align: center;
-}
+#auth-email:focus { border-color: var(--border-focus); }
 
 .auth-status {
   font-size: 13px;
@@ -884,7 +851,8 @@ input, textarea {
 }
 
 .geo-overlay.hidden {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .geo-content {
@@ -952,7 +920,7 @@ input, textarea {
   position: fixed;
   top: max(60px, calc(env(safe-area-inset-top, 12px) + 52px));
   right: 16px;
-  z-index: calc(var(--z-ui) + 1);
+  z-index: var(--z-ui);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -977,7 +945,7 @@ input, textarea {
 /* ── GPS Retry Banner ── */
 .gps-retry-banner {
   position: fixed;
-  top: max(104px, calc(env(safe-area-inset-top, 12px) + 96px));
+  top: max(90px, calc(env(safe-area-inset-top, 12px) + 82px));
   right: 16px;
   z-index: var(--z-ui);
   padding: 8px 14px;
@@ -1430,7 +1398,6 @@ input, textarea {
   color: white;
   position: relative;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
 }
 
 .avatar-rank-icon {
@@ -1439,6 +1406,16 @@ input, textarea {
   right: -2px;
   line-height: 1;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Small avatar in detail view */
+#detail-user {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 #detail-user .avatar-badge {

@@ -60,20 +60,6 @@ export function toggleRadar() {
   isVisible ? hideRadar() : showRadar();
   const btn = document.getElementById('btn-radar');
   if (btn) btn.classList.toggle('active', isVisible);
-
-  // Toast with custom duration
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  if (isVisible) {
-    toast.textContent = 'Radar overlay on. Local resolution is limited.';
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-  } else {
-    toast.textContent = 'Radar overlay off';
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 1000);
-  }
 }
 
 function showRadar() {

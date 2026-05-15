@@ -3,7 +3,7 @@
 // ============================================================
 
 import { ACHIEVEMENTS, REPORTER_LEVELS, COMMUNITY_LEVELS, XP_CHALLENGE_REPORT, XP_CHALLENGE_COMMUNITY } from './config.js';
-import { getUser, getProfile, updateProfile, signInWithEmail, signOut, onAuthChange } from './db.js';
+import { getUser, getProfile, updateProfile, signInWithEmail, signOut, onAuthChange, checkUsernameAvailable } from './db.js';
 import { showToast, getModMode, setModMode, getReporterLevel, getCommunityLevel, renderAvatar,
   getTodaysChallenges, getChallengeProgress, updateChallengeProgress, isChallengeComplete } from './utils.js';
 
@@ -288,17 +288,65 @@ function cancelEdit() {
 
 async function handleMagicLink() {
   const emailInput = document.getElementById('auth-email');
+  const usernameInput = document.getElementById('auth-username');
   const status = document.getElementById('auth-status');
   const btn = document.getElementById('btn-send-magic');
   const email = emailInput.value.trim();
-  if (!email || !email.includes('@')) { status.textContent = 'Enter a valid email'; status.className = 'auth-status error'; return; }
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const username = usernameInput.value.trim();
+
+  if (!email || !email.includes('@')) {
+    status.textContent = 'Enter a valid email';
+    status.className = 'auth-status error';
+    return;
+  }
+
+  // Validate username if provided
+  if (username) {
+    if (username.length < 2) {
+      status.textContent = 'Display name must be at least 2 characters';
+      status.className = 'auth-status error';
+      return;
+    }
+    if (username.length > 20) {
+      status.textContent = 'Display name must be 20 characters or less';
+      status.className = 'auth-status error';
+      return;
+    }
+    if (/<[^>]*>/.test(username)) {
+      status.textContent = 'Display name cannot contain HTML';
+      status.className = 'auth-status error';
+      return;
+    }
+    // Check availability
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const available = await checkUsernameAvailable(username);
+      if (!available) {
+        status.textContent = 'That display name is already taken';
+        status.className = 'auth-status error';
+        btn.disabled = false;
+        btn.textContent = 'Send Magic Link';
+        return;
+      }
+    } catch {
+      // Non-blocking — if check fails, proceed anyway (server will catch dupes)
+    }
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
   try {
-    await signInWithEmail(email);
+    await signInWithEmail(email, username || null);
     status.textContent = 'Check your email for the magic link!';
     status.className = 'auth-status success';
-  } catch (err) { status.textContent = err.message || 'Failed to send link'; status.className = 'auth-status error'; }
-  finally { btn.disabled = false; btn.textContent = 'Send Magic Link'; }
+  } catch (err) {
+    status.textContent = err.message || 'Failed to send link';
+    status.className = 'auth-status error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Magic Link';
+  }
 }
 
 async function handleSignOut() {

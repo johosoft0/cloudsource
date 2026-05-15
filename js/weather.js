@@ -84,3 +84,17 @@ export async function updateConditionsBar(lat, lng) {
     tempEl.textContent = '';
   }
 }
+
+/**
+ * Fetch baseline conditions at a point for embedding in reports.
+ * Returns { condition, temp } or null on failure.
+ * Non-blocking — report submission should not fail if this fails.
+ */
+export async function fetchBaselineAt(lat, lng) {
+  try {
+    const weather = await fetchCurrentWeather(lat, lng);
+    return { condition: weather.label, temp: weather.temp };
+  } catch {
+    return null;
+  }
+}

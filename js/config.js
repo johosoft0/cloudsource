@@ -74,18 +74,18 @@ export const COMMUNITY_LEVELS = [
   { level: 20, xp: 3750,  title: 'Voice of the Crowd',  badge: '💎' },
 ];
 
-// Conditions
+// Conditions (wmo = WMO Present Weather Code for standardization)
 export const CONDITIONS = [
-  { key: 'clear',        icon: '☀️', label: 'Clear',       color: '#fbbf24' },
-  { key: 'partly_cloudy',icon: '⛅', label: 'Partly',      color: '#a3c4e0' },
-  { key: 'cloudy',       icon: '☁️', label: 'Cloudy',      color: '#94a3b8' },
-  { key: 'light_rain',   icon: '🌦️', label: 'Lt Rain',     color: '#60a5fa' },
-  { key: 'heavy_rain',   icon: '🌧️', label: 'Hv Rain',     color: '#3b82f6' },
-  { key: 'storm',        icon: '⛈️', label: 'Storm',       color: '#8b5cf6' },
-  { key: 'snow',         icon: '❄️', label: 'Snow',        color: '#e0e7ff' },
-  { key: 'fog',          icon: '🌫️', label: 'Fog',         color: '#6b7280' },
-  { key: 'wind',         icon: '💨', label: 'Wind',        color: '#14b8a6' },
-  { key: 'other',        icon: '🌀', label: 'Other',       color: '#f472b6' },
+  { key: 'clear',        icon: '☀️', label: 'Clear',       color: '#fbbf24', wmo: 0 },
+  { key: 'partly_cloudy',icon: '⛅', label: 'Partly',      color: '#a3c4e0', wmo: 2 },
+  { key: 'cloudy',       icon: '☁️', label: 'Cloudy',      color: '#94a3b8', wmo: 3 },
+  { key: 'light_rain',   icon: '🌦️', label: 'Lt Rain',     color: '#60a5fa', wmo: 61 },
+  { key: 'heavy_rain',   icon: '🌧️', label: 'Hv Rain',     color: '#3b82f6', wmo: 65 },
+  { key: 'storm',        icon: '⛈️', label: 'Storm',       color: '#8b5cf6', wmo: 95 },
+  { key: 'snow',         icon: '❄️', label: 'Snow',        color: '#e0e7ff', wmo: 73 },
+  { key: 'fog',          icon: '🌫️', label: 'Fog',         color: '#6b7280', wmo: 45 },
+  { key: 'wind',         icon: '💨', label: 'Wind',        color: '#14b8a6', wmo: 0 },
+  { key: 'other',        icon: '🌀', label: 'Other',       color: '#f472b6', wmo: 0 },
 ];
 
 // Achievements

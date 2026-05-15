@@ -884,8 +884,7 @@ input, textarea {
 }
 
 .geo-overlay.hidden {
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .geo-content {
@@ -953,7 +952,7 @@ input, textarea {
   position: fixed;
   top: max(60px, calc(env(safe-area-inset-top, 12px) + 52px));
   right: 16px;
-  z-index: var(--z-ui);
+  z-index: calc(var(--z-ui) + 1);
   display: flex;
   align-items: center;
   gap: 5px;

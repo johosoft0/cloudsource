@@ -128,9 +128,12 @@ input, textarea {
 }
 
 .logo-icon {
-  font-size: 24px;
+  font-size: 22px;
   color: var(--accent);
   filter: drop-shadow(0 0 8px var(--accent-glow));
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .logo-text {
@@ -167,17 +170,18 @@ input, textarea {
 /* ── FAB ── */
 #fab-report {
   position: fixed;
-  bottom: 100px;
+  bottom: 95px;
   right: 16px;
   z-index: var(--z-ui);
   width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  border-radius: 28px;
   background: linear-gradient(135deg, var(--accent), #818cf8);
   color: white;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 10px 0 6px;
   box-shadow: 0 4px 20px var(--accent-glow), 0 0 40px rgba(56, 189, 248, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -189,19 +193,20 @@ input, textarea {
 /* ── Profile Button ── */
 #btn-profile {
   position: fixed;
-  bottom: 100px;
+  bottom: 95px;
   left: 16px;
   z-index: var(--z-ui);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 48px;
+  border-radius: 24px;
   background: var(--bg-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 8px 0 5px;
   color: var(--text-secondary);
   transition: all 0.2s ease;
 }
@@ -211,10 +216,17 @@ input, textarea {
   color: var(--accent);
 }
 
+.btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
 /* ── Help Button ── */
 #btn-help {
   position: fixed;
-  bottom: 152px;
+  bottom: 160px;
   left: 16px;
   z-index: var(--z-ui);
   width: 38px;
@@ -965,7 +977,7 @@ input, textarea {
 /* ── GPS Retry Banner ── */
 .gps-retry-banner {
   position: fixed;
-  top: max(90px, calc(env(safe-area-inset-top, 12px) + 82px));
+  top: max(96px, calc(env(safe-area-inset-top, 12px) + 90px));
   right: 16px;
   z-index: var(--z-ui);
   padding: 8px 14px;

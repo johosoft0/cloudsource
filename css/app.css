@@ -134,6 +134,7 @@ input, textarea {
   line-height: 1;
   display: flex;
   align-items: center;
+  transform: translateY(-1px);
 }
 
 .logo-text {
@@ -977,7 +978,7 @@ input, textarea {
 /* ── GPS Retry Banner ── */
 .gps-retry-banner {
   position: fixed;
-  top: max(96px, calc(env(safe-area-inset-top, 12px) + 90px));
+  top: max(104px, calc(env(safe-area-inset-top, 12px) + 96px));
   right: 16px;
   z-index: var(--z-ui);
   padding: 8px 14px;

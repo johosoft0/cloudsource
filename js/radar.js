@@ -5,6 +5,8 @@
 // Tile cache: mesonet.agron.iastate.edu/cache/tile.py
 // ============================================================
 
+import { showToast } from './utils.js';
+
 let map = null;
 let paneCreated = false;
 let isVisible = false;
@@ -60,6 +62,7 @@ export function toggleRadar() {
   isVisible ? hideRadar() : showRadar();
   const btn = document.getElementById('btn-radar');
   if (btn) btn.classList.toggle('active', isVisible);
+  showToast(isVisible ? 'Radar overlay on. Local resolution is limited.' : 'Radar overlay off');
 }
 
 function showRadar() {

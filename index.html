@@ -259,6 +259,20 @@
   </div>
 
   <div id="toast-container"></div>
+  <script>
+    // Capture auth error before Supabase client consumes the hash
+    (function() {
+      var h = window.location.hash;
+      if (h && h.indexOf('error') !== -1) {
+        var p = new URLSearchParams(h.substring(1));
+        var d = p.get('error_description');
+        if (d) {
+          window._csAuthError = decodeURIComponent(d.replace(/\+/g, ' '));
+          history.replaceState(null, '', window.location.pathname);
+        }
+      }
+    })();
+  </script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

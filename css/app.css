@@ -131,6 +131,9 @@ input, textarea {
   font-size: 24px;
   color: var(--accent);
   filter: drop-shadow(0 0 8px var(--accent-glow));
+  line-height: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .logo-text {
@@ -180,6 +183,7 @@ input, textarea {
   justify-content: center;
   box-shadow: 0 4px 20px var(--accent-glow), 0 0 40px rgba(56, 189, 248, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible;
 }
 
 #fab-report:active {
@@ -204,11 +208,25 @@ input, textarea {
   justify-content: center;
   color: var(--text-secondary);
   transition: all 0.2s ease;
+  overflow: visible;
 }
 
 #btn-profile:active {
   background: var(--bg-elevated);
   color: var(--accent);
+}
+
+.btn-label {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 /* ── Help Button ── */

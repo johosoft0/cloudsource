@@ -91,6 +91,7 @@ input, textarea {
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-sm) !important;
   overflow: hidden;
+  margin-top: 60px !important;
 }
 .leaflet-control-zoom a {
   background: var(--bg-surface) !important;
@@ -135,12 +136,13 @@ input, textarea {
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--accent), #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  white-space: nowrap;
 }
 
 .top-bar-right {
@@ -583,6 +585,15 @@ input, textarea {
 
 #detail-note:empty { display: none; }
 
+#detail-user {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
 .user-badge {
   display: inline-block;
   padding: 2px 6px;
@@ -660,7 +671,8 @@ input, textarea {
   line-height: 1.4;
 }
 
-#auth-email {
+#auth-email,
+#auth-username {
   width: 100%;
   padding: 12px;
   border-radius: var(--radius-sm);
@@ -671,7 +683,15 @@ input, textarea {
   margin-bottom: 12px;
 }
 
-#auth-email:focus { border-color: var(--border-focus); }
+#auth-email:focus,
+#auth-username:focus { border-color: var(--border-focus); }
+
+.auth-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-align: center;
+}
 
 .auth-status {
   font-size: 13px;
@@ -1398,6 +1418,7 @@ input, textarea {
   color: white;
   position: relative;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .avatar-rank-icon {
@@ -1406,16 +1427,6 @@ input, textarea {
   right: -2px;
   line-height: 1;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-}
-
-/* Small avatar in detail view */
-#detail-user {
-  font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
 }
 
 #detail-user .avatar-badge {

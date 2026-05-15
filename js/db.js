@@ -78,7 +78,7 @@ export async function getNearbyReports(lat, lng, radiusMiles = 5, since = null) 
   return data || [];
 }
 
-export async function submitReport({ userId, lat, lng, condition, intensity, note, photoPath }) {
+export async function submitReport({ userId, lat, lng, condition, intensity, note, photoPath, baselineCondition, baselineTemp }) {
   const { data, error } = await supabase
     .from('reports')
     .insert({
@@ -89,6 +89,8 @@ export async function submitReport({ userId, lat, lng, condition, intensity, not
       intensity,
       note: note || null,
       photo_path: photoPath || null,
+      baseline_condition: baselineCondition || null,
+      baseline_temp: baselineTemp || null,
     })
     .select()
     .single();

@@ -8,6 +8,7 @@ import { resizeImage, extractExifGps, distanceMiles, fuzzLocation, getCurrentPos
   showToast, showXpFloat, canSubmitReport, setLastReportTime,
   updateChallengeProgress, getChallengeProgress, getTodaysChallenges } from './utils.js';
 import { tryCompleteChallenge } from './auth.js';
+import { fetchBaselineAt } from './weather.js';
 
 let selectedCondition = null;
 let photoBlob = null;
@@ -81,6 +82,9 @@ async function handleSubmit() {
     let photoPath = null;
     if (photoBlob && window._csUser) photoPath = await uploadPhoto(window._csUser.id, photoBlob);
 
+    // Fetch baseline weather for comparison data (non-blocking)
+    const baseline = await fetchBaselineAt(fuzzed.lat, fuzzed.lng);
+
     const hasNote = document.getElementById('report-note').value.trim().length > 0;
     const report = await submitReport({
       userId: window._csUser.id, lat: fuzzed.lat, lng: fuzzed.lng,
@@ -88,6 +92,8 @@ async function handleSubmit() {
       intensity: parseInt(document.getElementById('intensity-slider').value),
       note: document.getElementById('report-note').value.trim(),
       photoPath,
+      baselineCondition: baseline?.condition || null,
+      baselineTemp: baseline?.temp || null,
     });
 
     showToast('Report submitted!', 'success');

@@ -1,6 +1,6 @@
 {
-  "name": "CloudSource Weather",
-  "short_name": "CloudSource Weather",
+  "name": "Cloudsource Weather",
+  "short_name": "Cloudsource",
   "description": "Hyper-local crowd-sourced weather intelligence",
   "start_url": "./",
   "scope": "./",

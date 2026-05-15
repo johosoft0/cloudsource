@@ -16,7 +16,7 @@ export const REPORT_COOLDOWN_MINUTES = 60;
 
 export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 export const NWS_API_URL = 'https://api.weather.gov';
-export const NWS_USER_AGENT = 'CloudSource/1.0 (cloudsource-app)';
+export const NWS_USER_AGENT = 'CloudsourceWeather/1.0 (cloudsourceweather.app)';
 export const RAINVIEWER_API_URL = 'https://api.rainviewer.com/public/weather-maps.json';
 
 export const XP_REPORT_BASE = 10;

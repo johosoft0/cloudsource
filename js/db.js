@@ -25,13 +25,14 @@ export function onAuthChange(callback) {
   });
 }
 
-export async function signInWithEmail(email) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin + window.location.pathname,
-    },
-  });
+export async function signInWithEmail(email, displayName = null) {
+  const opts = {
+    emailRedirectTo: window.location.origin + window.location.pathname,
+  };
+  if (displayName) {
+    opts.data = { full_name: displayName };
+  }
+  const { error } = await supabase.auth.signInWithOtp({ email, options: opts });
   if (error) throw error;
 }
 
@@ -41,6 +42,15 @@ export async function signOut() {
 }
 
 // ── Profiles ─────────────────────────────────────────────
+
+export async function checkUsernameAvailable(name) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('display_name', name)
+    .limit(1);
+  return !data || data.length === 0;
+}
 
 export async function getProfile(userId) {
   const { data, error } = await supabase

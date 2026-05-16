@@ -93,10 +93,10 @@ function updateProfileButton() {
   const btn = document.getElementById('btn-profile');
   if (currentProfile) {
     const lv = getReporterLevel(currentProfile.xp_report || 0);
-    btn.innerHTML = `<span style="font-size:20px;">${lv.badge}</span>`;
+    btn.innerHTML = `<span style="font-size:20px;">${lv.badge}</span><span class="btn-label">Profile</span>`;
     btn.title = lv.title;
   } else {
-    btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>`;
+    btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span class="btn-label">Profile</span>`;
   }
 }
 

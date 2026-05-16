@@ -212,4 +212,10 @@ function initHelp() {
 // TODO: Re-enable after active development is done
 // if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
 
+// ── Expired / Invalid Magic Link Detection ───────────────
+if (window._csAuthError) {
+  setTimeout(() => showToast(window._csAuthError, 'error'), 800);
+  delete window._csAuthError;
+}
+
 boot();
